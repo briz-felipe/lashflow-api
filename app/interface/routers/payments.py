@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
@@ -130,7 +130,7 @@ def create_payment(
         paid_amount_in_cents=body.paid_amount_in_cents,
         status=status,
         method=body.method,
-        paid_at=datetime.utcnow() if status.value == "paid" else None,
+        paid_at=datetime.now(timezone.utc) if status.value == "paid" else None,
         notes=body.notes,
     )
     created = repo.create(payment)
@@ -173,7 +173,7 @@ def update_payment(
         payment.paid_amount_in_cents, payment.total_amount_in_cents
     )
     if payment.status.value == "paid" and not payment.paid_at:
-        payment.paid_at = datetime.utcnow()
+        payment.paid_at = datetime.now(timezone.utc)
 
     updated = repo.update(payment)
     return _to_response(updated, repo)

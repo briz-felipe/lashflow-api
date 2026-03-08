@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import List, Optional
 from sqlmodel import select, func
 
@@ -44,7 +44,7 @@ class AppointmentRepository(BaseRepository[Appointment]):
         ).first()
 
     def get_today(self, professional_id: uuid.UUID) -> List[Appointment]:
-        today = datetime.utcnow().date()
+        today = datetime.now(timezone.utc).date()
         start = datetime(today.year, today.month, today.day)
         end = start + timedelta(days=1)
         return list(

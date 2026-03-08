@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import SQLModel, Field
 from app.domain.enums import ExpenseRecurrence
@@ -26,5 +26,5 @@ class Expense(SQLModel, table=True):
     installment_current: Optional[int] = Field(default=None, gt=0)
     installment_group_id: Optional[uuid.UUID] = Field(default=None, index=True)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

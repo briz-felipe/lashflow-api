@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List
 
 
@@ -35,7 +35,7 @@ def calculate_available_slots(
 
     Note: existing_appointments should only include non-cancelled/no_show appointments.
     """
-    now = now or datetime.utcnow()
+    now = now or datetime.now(timezone.utc)
     target_str = target_date.strftime("%Y-%m-%d")
 
     # Step 1: blocked date

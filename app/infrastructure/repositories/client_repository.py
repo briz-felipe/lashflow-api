@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from sqlmodel import select, func, col
 from sqlalchemy import and_
@@ -95,7 +95,7 @@ class ClientRepository(BaseRepository[Client]):
         return self._touch(client)
 
     def soft_delete(self, client: Client) -> None:
-        client.deleted_at = datetime.utcnow()
+        client.deleted_at = datetime.now(timezone.utc)
         self._touch(client)
 
     def get_stats(

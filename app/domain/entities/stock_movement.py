@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import SQLModel, Field
 from app.domain.enums import StockMovementType
@@ -16,7 +16,7 @@ class StockMovement(SQLModel, table=True):
     quantity: int = Field(gt=0)
     unit_cost_in_cents: int = Field(ge=0)
     total_cost_in_cents: int = Field(ge=0)  # calculated: quantity * unit_cost_in_cents
-    date: datetime = Field(default_factory=datetime.utcnow, index=True)
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
     notes: Optional[str] = Field(default=None)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

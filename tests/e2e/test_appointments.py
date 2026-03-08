@@ -24,9 +24,9 @@ def _create_procedure(client_app, auth_headers):
     return resp.json()["id"]
 
 
-def _create_appointment(client_app, auth_headers, client_id=None, procedure_id=None):
+def _create_appointment(client_app, auth_headers, client_id=None, procedure_id=None, phone="11111111111"):
     if client_id is None:
-        client_id = _create_client(client_app, auth_headers)
+        client_id = _create_client(client_app, auth_headers, phone=phone)
     if procedure_id is None:
         procedure_id = _create_procedure(client_app, auth_headers)
     resp = client_app.post(

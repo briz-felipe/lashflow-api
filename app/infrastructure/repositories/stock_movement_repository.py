@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from sqlmodel import select
 
@@ -37,7 +37,7 @@ class StockMovementRepository(BaseRepository[StockMovement]):
         """Creates the movement and updates material stock in a single transaction."""
         from datetime import datetime as dt_cls
         material.current_stock = new_stock
-        material.updated_at = dt_cls.utcnow()
+        material.updated_at = datetime.now(timezone.utc)
         self.session.add(material)
         self.session.add(movement)
         self.session.commit()

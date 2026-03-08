@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import select, func
 
@@ -51,7 +51,7 @@ class ExpenseRepository(BaseRepository[Expense]):
 
     def mark_paid(self, expense: Expense) -> Expense:
         expense.is_paid = True
-        expense.paid_at = datetime.utcnow()
+        expense.paid_at = datetime.now(timezone.utc)
         return self._touch(expense)
 
     def get_summary(self, professional_id: uuid.UUID, month: str) -> dict:

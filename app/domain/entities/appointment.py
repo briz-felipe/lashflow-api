@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from sqlmodel import SQLModel, Field
 from app.domain.enums import AppointmentStatus, LashServiceType, CancelledBy
@@ -23,14 +23,14 @@ class Appointment(SQLModel, table=True):
     price_charged: int = Field(ge=0)
 
     notes: Optional[str] = Field(default=None)
-    requested_at: datetime = Field(default_factory=datetime.utcnow)
+    requested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     confirmed_at: Optional[datetime] = Field(default=None)
     cancelled_at: Optional[datetime] = Field(default=None)
     cancellation_reason: Optional[str] = Field(default=None)
     cancelled_by: Optional[CancelledBy] = Field(default=None)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property
     def ends_at(self) -> datetime:

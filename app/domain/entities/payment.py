@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import SQLModel, Field
 from app.domain.enums import PaymentStatus, PaymentMethod
@@ -12,7 +12,7 @@ class PartialPaymentRecord(SQLModel, table=True):
     payment_id: uuid.UUID = Field(foreign_key="payments.id", index=True)
     amount_in_cents: int = Field(gt=0)
     method: PaymentMethod
-    paid_at: datetime = Field(default_factory=datetime.utcnow)
+    paid_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Payment(SQLModel, table=True):
@@ -31,5 +31,5 @@ class Payment(SQLModel, table=True):
     paid_at: Optional[datetime] = Field(default=None)
     notes: Optional[str] = Field(default=None)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

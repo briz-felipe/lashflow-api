@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
@@ -169,7 +169,7 @@ def update_status(
     validate_status_transition(appt.status, body.status)
 
     if body.status == AppointmentStatus.confirmed:
-        appt.confirmed_at = datetime.utcnow()
+        appt.confirmed_at = datetime.now(timezone.utc)
 
     appt.status = body.status
     updated = repo.update(appt)
@@ -191,7 +191,7 @@ def cancel_appointment(
     validate_status_transition(appt.status, AppointmentStatus.cancelled)
 
     appt.status = AppointmentStatus.cancelled
-    appt.cancelled_at = datetime.utcnow()
+    appt.cancelled_at = datetime.now(timezone.utc)
     appt.cancellation_reason = body.reason
     appt.cancelled_by = body.cancelled_by
 

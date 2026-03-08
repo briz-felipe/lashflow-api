@@ -1,5 +1,5 @@
 from typing import Generic, TypeVar
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import Session, SQLModel
 
 ModelT = TypeVar("ModelT", bound=SQLModel)
@@ -22,7 +22,7 @@ class BaseRepository(Generic[ModelT]):
     def _touch(self, obj: ModelT) -> ModelT:
         """Update updated_at timestamp and save."""
         if hasattr(obj, "updated_at"):
-            obj.updated_at = datetime.utcnow()  # type: ignore[assignment]
+            obj.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
         return self._save(obj)
 
     # NOTE: Cache hooks — to add a cache layer in the future, wrap individual
