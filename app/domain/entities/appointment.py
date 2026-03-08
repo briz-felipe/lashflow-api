@@ -1,0 +1,37 @@
+import uuid
+from datetime import datetime, timedelta
+from typing import Optional
+from sqlmodel import SQLModel, Field
+from app.domain.enums import AppointmentStatus, LashServiceType, CancelledBy
+
+
+class Appointment(SQLModel, table=True):
+    __tablename__ = "appointments"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    professional_id: uuid.UUID = Field(foreign_key="users.id", index=True)
+
+    client_id: uuid.UUID = Field(foreign_key="clients.id", index=True)
+    procedure_id: uuid.UUID = Field(foreign_key="procedures.id", index=True)
+    payment_id: Optional[uuid.UUID] = Field(default=None, foreign_key="payments.id")
+
+    service_type: Optional[LashServiceType] = Field(default=None)
+    status: AppointmentStatus = Field(default=AppointmentStatus.pending_approval, index=True)
+
+    scheduled_at: datetime = Field(index=True)
+    duration_minutes: int = Field(gt=0)
+    price_charged: int = Field(ge=0)
+
+    notes: Optional[str] = Field(default=None)
+    requested_at: datetime = Field(default_factory=datetime.utcnow)
+    confirmed_at: Optional[datetime] = Field(default=None)
+    cancelled_at: Optional[datetime] = Field(default=None)
+    cancellation_reason: Optional[str] = Field(default=None)
+    cancelled_by: Optional[CancelledBy] = Field(default=None)
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    @property
+    def ends_at(self) -> datetime:
+        return self.scheduled_at + timedelta(minutes=self.duration_minutes)

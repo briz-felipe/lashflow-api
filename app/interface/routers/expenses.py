@@ -1,0 +1,151 @@
+import uuid
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session
+
+from app.infrastructure.database import get_session
+from app.infrastructure.repositories.expense_repository import ExpenseRepository
+from app.domain.entities.expense import Expense
+from app.domain.services.expense_service import generate_installments
+from app.interface.dependencies import get_professional_id
+from app.interface.schemas.expense import (
+    ExpenseCreate,
+    ExpenseUpdate,
+    ExpenseResponse,
+    ExpenseInstallmentResponse,
+    ExpenseSummaryResponse,
+)
+
+router = APIRouter(prefix="/expenses", tags=["expenses"])
+
+
+@router.get("/summary", response_model=ExpenseSummaryResponse)
+def expense_summary(
+    month: str = Query(..., description="YYYY-MM"),
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ExpenseRepository(session)
+    return repo.get_summary(professional_id, month)
+
+
+@router.get("/monthly-totals")
+def monthly_totals(
+    months: int = Query(6, ge=1, le=24),
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ExpenseRepository(session)
+    return repo.get_monthly_totals(professional_id, months)
+
+
+@router.get("/", response_model=List[ExpenseResponse])
+def list_expenses(
+    month: Optional[str] = None,
+    category: Optional[str] = None,
+    is_paid: Optional[bool] = None,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ExpenseRepository(session)
+    return repo.list(professional_id, month=month, category=category, is_paid=is_paid)
+
+
+@router.get("/{expense_id}", response_model=ExpenseResponse)
+def get_expense(
+    expense_id: uuid.UUID,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ExpenseRepository(session)
+    expense = repo.get_by_id(professional_id, expense_id)
+    if not expense:
+        raise HTTPException(404, "Expense not found")
+    return expense
+
+
+@router.post("/", response_model=ExpenseInstallmentResponse, status_code=201)
+def create_expense(
+    body: ExpenseCreate,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ExpenseRepository(session)
+
+    if body.installments and body.installments > 1:
+        records = generate_installments(
+            name=body.name,
+            category=body.category,
+            amount_in_cents=body.amount_in_cents,
+            due_day=body.due_day,
+            reference_month=body.reference_month,
+            notes=body.notes,
+            installments=body.installments,
+        )
+        expenses = [
+            Expense(**r, professional_id=professional_id) for r in records
+        ]
+        created = repo.create_many(expenses)
+        return ExpenseInstallmentResponse(
+            expense=ExpenseResponse.model_validate(created[0]),
+            installments_created=len(created),
+            installment_group_id=created[0].installment_group_id,
+        )
+
+    expense = Expense(
+        professional_id=professional_id,
+        name=body.name,
+        category=body.category,
+        amount_in_cents=body.amount_in_cents,
+        recurrence=body.recurrence,
+        due_day=body.due_day,
+        reference_month=body.reference_month,
+        notes=body.notes,
+    )
+    created = repo.create(expense)
+    return ExpenseInstallmentResponse(
+        expense=ExpenseResponse.model_validate(created),
+        installments_created=1,
+    )
+
+
+@router.put("/{expense_id}", response_model=ExpenseResponse)
+def update_expense(
+    expense_id: uuid.UUID,
+    body: ExpenseUpdate,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ExpenseRepository(session)
+    expense = repo.get_by_id(professional_id, expense_id)
+    if not expense:
+        raise HTTPException(404, "Expense not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(expense, field, value)
+    return repo.update(expense)
+
+
+@router.delete("/{expense_id}", status_code=204)
+def delete_expense(
+    expense_id: uuid.UUID,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ExpenseRepository(session)
+    expense = repo.get_by_id(professional_id, expense_id)
+    if not expense:
+        raise HTTPException(404, "Expense not found")
+    repo.delete(expense)
+
+
+@router.patch("/{expense_id}/pay", response_model=ExpenseResponse)
+def pay_expense(
+    expense_id: uuid.UUID,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ExpenseRepository(session)
+    expense = repo.get_by_id(professional_id, expense_id)
+    if not expense:
+        raise HTTPException(404, "Expense not found")
+    return repo.mark_paid(expense)
