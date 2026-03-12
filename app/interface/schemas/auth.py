@@ -7,6 +7,8 @@ from pydantic import BaseModel
 class LoginRequest(BaseModel):
     username: str
     password: str
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
 
 
 class RegisterRequest(BaseModel):

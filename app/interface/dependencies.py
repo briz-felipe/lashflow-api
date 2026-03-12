@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 import bcrypt
 from jose import JWTError, jwt
@@ -12,7 +12,8 @@ from app.infrastructure.settings import settings
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.domain.entities.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+# auto_error=False so we can fall back to cookie when no Bearer header is present
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -41,14 +42,22 @@ def decode_token(token: str) -> dict:
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
     session: Session = Depends(get_session),
 ) -> User:
+    # Bearer header takes priority; fall back to httpOnly cookie
+    if not token:
+        token = request.cookies.get("access_token")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not token:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: Optional[str] = payload.get("sub")

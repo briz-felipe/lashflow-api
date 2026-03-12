@@ -13,6 +13,21 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "admin"
     ADMIN_EMAIL: str | None = None
 
+    # OAuth2 client credentials (optional)
+    # When set, /auth/token requires client_id + client_secret matching these values.
+    # Use this to restrict which clients (e.g. your Next.js backend) can exchange
+    # username/password for tokens. Leave unset to disable client validation.
+    OAUTH2_CLIENT_ID: str | None = None
+    OAUTH2_CLIENT_SECRET: str | None = None
+
+    # Set True in production (requires HTTPS for Secure cookie flag)
+    COOKIE_SECURE: bool = False
+
+    @property
+    def oauth2_client_auth_enabled(self) -> bool:
+        """True only when both client_id and client_secret are non-empty strings."""
+        return bool(self.OAUTH2_CLIENT_ID and self.OAUTH2_CLIENT_SECRET)
+
     model_config = ConfigDict(env_file=".env", extra="ignore")
 
 
