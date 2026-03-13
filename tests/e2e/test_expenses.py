@@ -13,7 +13,7 @@ class TestExpenses:
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["installments_created"] == 1
+        assert data["installmentsCreated"] == 1
         assert data["expense"]["name"] == "Aluguel"
 
     def test_create_installment_expense(self, client_app, auth_headers):
@@ -31,10 +31,10 @@ class TestExpenses:
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["installments_created"] == 6
-        assert data["installment_group_id"] is not None
-        assert data["expense"]["installment_current"] == 1
-        assert data["expense"]["installment_total"] == 6
+        assert data["installmentsCreated"] == 6
+        assert data["installmentGroupId"] is not None
+        assert data["expense"]["installmentCurrent"] == 1
+        assert data["expense"]["installmentTotal"] == 6
 
     def test_list_expenses_by_month(self, client_app, auth_headers):
         client_app.post(
@@ -67,7 +67,7 @@ class TestExpenses:
         expense_id = create_resp.json()["expense"]["id"]
         pay_resp = client_app.patch(f"/api/v1/expenses/{expense_id}/pay", headers=auth_headers)
         assert pay_resp.status_code == 200
-        assert pay_resp.json()["is_paid"] is True
+        assert pay_resp.json()["isPaid"] is True
 
     def test_expense_summary(self, client_app, auth_headers):
         client_app.post(
@@ -84,6 +84,6 @@ class TestExpenses:
         resp = client_app.get("/api/v1/expenses/summary?month=2024-05", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["total_in_cents"] == 100000
-        assert data["pending_in_cents"] == 100000
-        assert "aluguel" in data["by_category"]
+        assert data["totalInCents"] == 100000
+        assert data["pendingInCents"] == 100000
+        assert "aluguel" in data["byCategory"]

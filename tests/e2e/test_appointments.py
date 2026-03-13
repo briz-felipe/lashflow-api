@@ -46,7 +46,7 @@ class TestAppointments:
     def test_create_appointment(self, client_app, auth_headers):
         appt = _create_appointment(client_app, auth_headers)
         assert appt["status"] == "pending_approval"
-        assert "ends_at" in appt
+        assert "endsAt" in appt
 
     def test_status_transition_pending_to_confirmed(self, client_app, auth_headers):
         appt = _create_appointment(client_app, auth_headers)
@@ -78,7 +78,7 @@ class TestAppointments:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "cancelled"
-        assert data["cancellation_reason"] == "Client request"
+        assert data["cancellationReason"] == "Client request"
 
     def test_list_appointments(self, client_app, auth_headers):
         _create_appointment(client_app, auth_headers, phone="22222222222")

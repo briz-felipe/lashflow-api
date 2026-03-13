@@ -65,5 +65,5 @@ def auth_headers_fixture(client_app, admin_user):
         json={"username": "admin", "password": "admin123"},
     )
     assert resp.status_code == 200, resp.text
-    token = resp.json()["access_token"]
+    token = resp.json()["accessToken"]
     return {"Authorization": f"Bearer {token}"}

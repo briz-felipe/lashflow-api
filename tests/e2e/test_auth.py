@@ -6,8 +6,8 @@ class TestLogin:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
+        assert "accessToken" in data
+        assert data["tokenType"] == "bearer"
 
     def test_login_invalid_credentials(self, client_app, admin_user):
         resp = client_app.post(
@@ -30,7 +30,7 @@ class TestMe:
         assert resp.status_code == 200
         data = resp.json()
         assert data["username"] == "admin"
-        assert data["is_superuser"] is True
+        assert data["isSuperuser"] is True
 
     def test_me_unauthorized_without_token(self, client_app):
         resp = client_app.get("/api/v1/auth/me")
