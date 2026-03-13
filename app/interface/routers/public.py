@@ -1,5 +1,7 @@
 import uuid
-from datetime import datetime
+import calendar
+from datetime import datetime, date
+from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
@@ -16,7 +18,7 @@ from app.domain.enums import AppointmentStatus
 from app.domain.services.client_service import normalize_phone
 from app.domain.services.slot_calculator import calculate_available_slots
 from app.interface.schemas.procedure import ProcedureResponse
-from app.interface.schemas.appointment import AppointmentResponse, AvailableSlotsResponse
+from app.interface.schemas.appointment import AppointmentResponse, AvailableSlotsResponse, AvailableDatesResponse
 from pydantic import BaseModel
 from typing import Optional, List
 

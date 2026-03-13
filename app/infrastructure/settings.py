@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     # Set True in production (requires HTTPS for Secure cookie flag)
     COOKIE_SECURE: bool = False
 
+    # CORS — comma-separated origins allowed to call the API
+    # Example: "http://localhost:3000,https://app.lashflow.com.br"
+    CORS_ORIGINS: str = "http://localhost:3000"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
     @property
     def oauth2_client_auth_enabled(self) -> bool:
         """True only when both client_id and client_secret are non-empty strings."""

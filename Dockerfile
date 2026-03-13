@@ -2,7 +2,7 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir pip --upgrade
+RUN pip install --no-cache-dir pip setuptools wheel --upgrade
 
 COPY pyproject.toml .
 RUN pip install --no-cache-dir ".[dev]" || pip install --no-cache-dir .

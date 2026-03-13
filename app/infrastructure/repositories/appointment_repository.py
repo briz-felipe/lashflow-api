@@ -84,6 +84,23 @@ class AppointmentRepository(BaseRepository[Appointment]):
             ).all()
         )
 
+    def get_active_in_range(
+        self, professional_id: uuid.UUID, from_date: date, to_date: date
+    ) -> List[Appointment]:
+        """Returns non-cancelled/no_show appointments within a date range (inclusive)."""
+        start = datetime(from_date.year, from_date.month, from_date.day)
+        end = datetime(to_date.year, to_date.month, to_date.day) + timedelta(days=1)
+        return list(
+            self.session.exec(
+                self._base_query(professional_id)
+                .where(
+                    Appointment.scheduled_at >= start,
+                    Appointment.scheduled_at < end,
+                    Appointment.status.in_(_ACTIVE_STATUSES),
+                )
+            ).all()
+        )
+
     def create(self, appointment: Appointment) -> Appointment:
         return self._save(appointment)
 

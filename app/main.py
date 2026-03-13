@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlmodel import Session
+from sqlmodel import Session, text
 
 from app.infrastructure.database import create_db_and_tables, engine
 from app.infrastructure.settings import settings
@@ -54,6 +56,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# --- CORS ---
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # --- Exception Handlers ---
 
 @app.exception_handler(InvalidStatusTransition)
@@ -94,6 +106,15 @@ async def handle_allergy_detail(request: Request, exc: AllergyDetailRequired):
         status_code=422,
         content={"error": "ALLERGY_DETAIL_REQUIRED", "message": str(exc), "status_code": 422},
     )
+    
+# -- Health Check Endpoint ---
+@app.get("/health")
+def health_check():
+    """Simple health check endpoint to verify the API is running."""
+    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+
 
 
 # --- Routers ---

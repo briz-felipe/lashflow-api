@@ -6,7 +6,7 @@ services:
       target: builder
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./app:/app/app
     environment:
@@ -14,6 +14,7 @@ services:
       SECRET_KEY: dev-secret-key-change-in-prod
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: admin
+      CORS_ORIGINS: "http://localhost:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -21,8 +22,9 @@ services:
 
   db:
     image: postgres:16-alpine
+    platform: linux/amd64
     ports:
-      - "5432:5432"
+      - "5434:5432"
     environment:
       POSTGRES_USER: lashflow
       POSTGRES_PASSWORD: lashflow

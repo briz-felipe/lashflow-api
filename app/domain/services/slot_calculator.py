@@ -35,7 +35,7 @@ def calculate_available_slots(
 
     Note: existing_appointments should only include non-cancelled/no_show appointments.
     """
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.utcnow()
     target_str = target_date.strftime("%Y-%m-%d")
 
     # Step 1: blocked date

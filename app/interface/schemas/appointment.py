@@ -46,3 +46,7 @@ class AppointmentResponse(CamelModel):
 
 class AvailableSlotsResponse(CamelModel):
     slots: List[str]
+
+
+class AvailableDatesResponse(CamelModel):
+    dates: List[str]  # "YYYY-MM-DD"
