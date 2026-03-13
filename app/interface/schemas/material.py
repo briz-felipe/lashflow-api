@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
 from app.domain.enums import MaterialCategory, MaterialUnit
+from app.interface.schemas.base import CamelModel
 
 
-class MaterialCreate(BaseModel):
+class MaterialCreate(CamelModel):
     name: str
     category: MaterialCategory
     unit: MaterialUnit
@@ -15,7 +15,7 @@ class MaterialCreate(BaseModel):
     notes: Optional[str] = None
 
 
-class MaterialUpdate(BaseModel):
+class MaterialUpdate(CamelModel):
     name: Optional[str] = None
     category: Optional[MaterialCategory] = None
     unit: Optional[MaterialUnit] = None
@@ -24,7 +24,7 @@ class MaterialUpdate(BaseModel):
     notes: Optional[str] = None
 
 
-class MaterialResponse(BaseModel):
+class MaterialResponse(CamelModel):
     id: uuid.UUID
     name: str
     category: MaterialCategory
@@ -37,8 +37,6 @@ class MaterialResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
 
-
-class StockValueResponse(BaseModel):
+class StockValueResponse(CamelModel):
     total_value_in_cents: int

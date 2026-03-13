@@ -1,23 +1,22 @@
 import uuid
-from pydantic import BaseModel
 from typing import List
+from app.interface.schemas.base import CamelModel
 
-class TimeSlotItem(BaseModel):
+
+class TimeSlotItem(CamelModel):
     day_of_week: int
     start_time: str
     end_time: str
     is_available: bool
 
 
-class TimeSlotResponse(BaseModel):
+class TimeSlotResponse(CamelModel):
     id: uuid.UUID
     day_of_week: int
     start_time: str
     end_time: str
     is_available: bool
 
-    model_config = {"from_attributes": True}
 
-
-class TimeSlotsUpdate(BaseModel):
+class TimeSlotsUpdate(CamelModel):
     slots: List[TimeSlotItem]

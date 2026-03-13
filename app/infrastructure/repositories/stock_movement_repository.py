@@ -28,6 +28,29 @@ class StockMovementRepository(BaseRepository[StockMovement]):
             stmt = stmt.where(StockMovement.date <= to_date)
         return list(self.session.exec(stmt.order_by(StockMovement.date.desc())).all())
 
+    def list_with_material_name(
+        self,
+        professional_id: uuid.UUID,
+        material_id: Optional[uuid.UUID] = None,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+    ) -> List[tuple]:
+        """Returns list of (StockMovement, material_name) tuples."""
+        stmt = (
+            select(StockMovement, Material.name.label("material_name"))
+            .outerjoin(Material, StockMovement.material_id == Material.id)
+            .where(StockMovement.professional_id == professional_id)
+        )
+        if material_id:
+            stmt = stmt.where(StockMovement.material_id == material_id)
+        if from_date:
+            stmt = stmt.where(StockMovement.date >= from_date)
+        if to_date:
+            stmt = stmt.where(StockMovement.date <= to_date)
+        stmt = stmt.order_by(StockMovement.date.desc())
+        rows = self.session.execute(stmt).all()
+        return [(row[0], row[1]) for row in rows]
+
     def create_with_stock_update(
         self,
         movement: StockMovement,

@@ -1,40 +1,40 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from app.interface.schemas.base import CamelModel
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(CamelModel):
     username: str
     password: str
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
 
 
-class RegisterRequest(BaseModel):
+class RegisterRequest(CamelModel):
     username: str
     password: str
     email: Optional[str] = None
 
 
-class TokenResponse(BaseModel):
+class TokenResponse(CamelModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
 
 
-class RefreshRequest(BaseModel):
+class RefreshRequest(CamelModel):
     refresh_token: str
 
 
-class TokenValidateResponse(BaseModel):
+class TokenValidateResponse(CamelModel):
     valid: bool
     user_id: Optional[uuid.UUID] = None
     username: Optional[str] = None
     expires_at: Optional[datetime] = None
 
 
-class MeResponse(BaseModel):
+class MeResponse(CamelModel):
     id: uuid.UUID
     username: str
     email: Optional[str]

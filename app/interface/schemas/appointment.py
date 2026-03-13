@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel
+from app.interface.schemas.base import CamelModel
 from app.domain.enums import AppointmentStatus, LashServiceType, CancelledBy
 
 
-class AppointmentCreate(BaseModel):
+class AppointmentCreate(CamelModel):
     client_id: uuid.UUID
     procedure_id: uuid.UUID
     scheduled_at: datetime
@@ -14,16 +14,16 @@ class AppointmentCreate(BaseModel):
     notes: Optional[str] = None
 
 
-class AppointmentStatusUpdate(BaseModel):
+class AppointmentStatusUpdate(CamelModel):
     status: AppointmentStatus
 
 
-class AppointmentCancelRequest(BaseModel):
+class AppointmentCancelRequest(CamelModel):
     reason: Optional[str] = None
     cancelled_by: Optional[CancelledBy] = None
 
 
-class AppointmentResponse(BaseModel):
+class AppointmentResponse(CamelModel):
     id: uuid.UUID
     client_id: uuid.UUID
     procedure_id: uuid.UUID
@@ -43,8 +43,6 @@ class AppointmentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
 
-
-class AvailableSlotsResponse(BaseModel):
+class AvailableSlotsResponse(CamelModel):
     slots: List[str]

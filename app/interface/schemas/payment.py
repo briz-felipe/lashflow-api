@@ -1,25 +1,23 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel
 from app.domain.enums import PaymentStatus, PaymentMethod
+from app.interface.schemas.base import CamelModel
 
 
-class PartialPaymentRequest(BaseModel):
+class PartialPaymentRequest(CamelModel):
     amount_in_cents: int
     method: PaymentMethod
 
 
-class PartialPaymentRecordResponse(BaseModel):
+class PartialPaymentRecordResponse(CamelModel):
     id: uuid.UUID
     amount_in_cents: int
     method: PaymentMethod
     paid_at: datetime
 
-    model_config = {"from_attributes": True}
 
-
-class PaymentCreate(BaseModel):
+class PaymentCreate(CamelModel):
     appointment_id: uuid.UUID
     client_id: uuid.UUID
     total_amount_in_cents: int
@@ -28,14 +26,14 @@ class PaymentCreate(BaseModel):
     notes: Optional[str] = None
 
 
-class PaymentUpdate(BaseModel):
+class PaymentUpdate(CamelModel):
     partial_payment: Optional[PartialPaymentRequest] = None
     paid_amount_in_cents: Optional[int] = None
     method: Optional[PaymentMethod] = None
     notes: Optional[str] = None
 
 
-class PaymentResponse(BaseModel):
+class PaymentResponse(CamelModel):
     id: uuid.UUID
     appointment_id: uuid.UUID
     client_id: uuid.UUID
@@ -49,10 +47,21 @@ class PaymentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+
+class CashFlowItemResponse(CamelModel):
+    id: uuid.UUID
+    appointment_id: Optional[uuid.UUID]
+    client_id: uuid.UUID
+    client_name: Optional[str] = None
+    procedure_name: Optional[str] = None
+    total_amount_in_cents: int
+    paid_amount_in_cents: int
+    method: Optional[PaymentMethod]
+    status: PaymentStatus
+    created_at: datetime
 
 
-class PaymentStatsResponse(BaseModel):
+class PaymentStatsResponse(CamelModel):
     today_in_cents: int
     this_week_in_cents: int
     this_month_in_cents: int
@@ -60,12 +69,12 @@ class PaymentStatsResponse(BaseModel):
     growth_percent: float
 
 
-class MonthlyRevenueItem(BaseModel):
+class MonthlyRevenueItem(CamelModel):
     month: str
     amount_in_cents: int
 
 
-class MethodBreakdownResponse(BaseModel):
+class MethodBreakdownResponse(CamelModel):
     cash: int = 0
     credit_card: int = 0
     debit_card: int = 0

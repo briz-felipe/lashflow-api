@@ -1,16 +1,14 @@
 import uuid
 from typing import Optional
-from pydantic import BaseModel
+from app.interface.schemas.base import CamelModel
 
 
-class BlockedDateCreate(BaseModel):
+class BlockedDateCreate(CamelModel):
     date: str  # "YYYY-MM-DD"
     reason: Optional[str] = None
 
 
-class BlockedDateResponse(BaseModel):
+class BlockedDateResponse(CamelModel):
     id: uuid.UUID
     date: str
     reason: Optional[str]
-
-    model_config = {"from_attributes": True}

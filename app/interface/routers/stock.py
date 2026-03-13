@@ -128,7 +128,15 @@ def list_movements(
     session: Session = Depends(get_session),
 ):
     repo = StockMovementRepository(session)
-    return repo.list(professional_id, material_id=material_id, from_date=from_date, to_date=to_date)
+    rows = repo.list_with_material_name(
+        professional_id, material_id=material_id, from_date=from_date, to_date=to_date
+    )
+    result = []
+    for movement, material_name in rows:
+        item = StockMovementResponse.model_validate(movement)
+        item.material_name = material_name
+        result.append(item)
+    return result
 
 
 @router.post("/movements", response_model=StockMovementResponse, status_code=201)
@@ -155,4 +163,7 @@ def create_movement(
         notes=body.notes,
     )
     movement_repo = StockMovementRepository(session)
-    return movement_repo.create_with_stock_update(movement, material, new_stock)
+    created = movement_repo.create_with_stock_update(movement, material, new_stock)
+    item = StockMovementResponse.model_validate(created)
+    item.material_name = material.name
+    return item

@@ -13,6 +13,7 @@ from app.interface.schemas.payment import (
     PaymentCreate,
     PaymentUpdate,
     PaymentResponse,
+    CashFlowItemResponse,
     PaymentStatsResponse,
     MonthlyRevenueItem,
     MethodBreakdownResponse,
@@ -74,7 +75,7 @@ def get_by_appointment(
     return _to_response(payment, repo)
 
 
-@router.get("/cash-flow", response_model=List[PaymentResponse])
+@router.get("/cash-flow", response_model=List[CashFlowItemResponse])
 def cash_flow(
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
@@ -82,8 +83,14 @@ def cash_flow(
     session: Session = Depends(get_session),
 ):
     repo = PaymentRepository(session)
-    payments = repo.list(professional_id, from_date=from_date, to_date=to_date)
-    return [_to_response(p, repo) for p in payments]
+    rows = repo.get_cash_flow(professional_id, from_date=from_date, to_date=to_date)
+    result = []
+    for payment, client_name, procedure_name in rows:
+        item = CashFlowItemResponse.model_validate(payment)
+        item.client_name = client_name
+        item.procedure_name = procedure_name
+        result.append(item)
+    return result
 
 
 @router.get("/", response_model=List[PaymentResponse])

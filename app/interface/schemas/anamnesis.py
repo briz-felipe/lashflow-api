@@ -1,18 +1,19 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
 from app.domain.enums import AnamnesisHairLoss, AnamnosisProcedureType
 from app.domain.exceptions import AllergyDetailRequired
+from app.interface.schemas.base import CamelModel
 
 
-class LashMappingSchema(BaseModel):
+class LashMappingSchema(CamelModel):
     size: Optional[str] = None
     curve: Optional[str] = None
     thickness: Optional[str] = None
 
 
-class AnamnesisCreate(BaseModel):
+class AnamnesisCreate(CamelModel):
     client_id: uuid.UUID
     has_allergy: bool = False
     allergy_details: Optional[str] = None
@@ -38,7 +39,7 @@ class AnamnesisCreate(BaseModel):
         return self
 
 
-class AnamnesisUpdate(BaseModel):
+class AnamnesisUpdate(CamelModel):
     has_allergy: Optional[bool] = None
     allergy_details: Optional[str] = None
     had_eye_surgery_last_3_months: Optional[bool] = None
@@ -57,7 +58,7 @@ class AnamnesisUpdate(BaseModel):
     notes: Optional[str] = None
 
 
-class AnamnesisResponse(BaseModel):
+class AnamnesisResponse(CamelModel):
     id: uuid.UUID
     client_id: uuid.UUID
     has_allergy: bool
@@ -78,5 +79,3 @@ class AnamnesisResponse(BaseModel):
     notes: Optional[str]
     created_at: datetime
     updated_at: datetime
-
-    model_config = {"from_attributes": True}

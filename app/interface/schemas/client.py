@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel
+from app.interface.schemas.base import CamelModel
 from app.domain.enums import ClientSegment
 
 
-class AddressSchema(BaseModel):
+class AddressSchema(CamelModel):
     street: Optional[str] = None
     neighborhood: Optional[str] = None
     city: Optional[str] = None
@@ -13,7 +13,7 @@ class AddressSchema(BaseModel):
     zip_code: Optional[str] = None
 
 
-class ClientCreate(BaseModel):
+class ClientCreate(CamelModel):
     name: str
     phone: str
     email: Optional[str] = None
@@ -23,7 +23,7 @@ class ClientCreate(BaseModel):
     address: Optional[AddressSchema] = None
 
 
-class ClientUpdate(BaseModel):
+class ClientUpdate(CamelModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
@@ -34,7 +34,7 @@ class ClientUpdate(BaseModel):
     segments: Optional[List[ClientSegment]] = None
 
 
-class ClientResponse(BaseModel):
+class ClientResponse(CamelModel):
     id: uuid.UUID
     name: str
     phone: str
@@ -51,5 +51,3 @@ class ClientResponse(BaseModel):
     last_appointment_date: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
-
-    model_config = {"from_attributes": True}

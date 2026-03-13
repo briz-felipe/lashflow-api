@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
 from app.domain.enums import ExpenseRecurrence
+from app.interface.schemas.base import CamelModel
 
 
-class ExpenseCreate(BaseModel):
+class ExpenseCreate(CamelModel):
     name: str
     category: str
     amount_in_cents: int
@@ -16,7 +16,7 @@ class ExpenseCreate(BaseModel):
     installments: Optional[int] = None  # > 1 triggers installment generation
 
 
-class ExpenseUpdate(BaseModel):
+class ExpenseUpdate(CamelModel):
     name: Optional[str] = None
     category: Optional[str] = None
     amount_in_cents: Optional[int] = None
@@ -26,7 +26,7 @@ class ExpenseUpdate(BaseModel):
     notes: Optional[str] = None
 
 
-class ExpenseResponse(BaseModel):
+class ExpenseResponse(CamelModel):
     id: uuid.UUID
     name: str
     category: str
@@ -43,16 +43,14 @@ class ExpenseResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
 
-
-class ExpenseInstallmentResponse(BaseModel):
+class ExpenseInstallmentResponse(CamelModel):
     expense: ExpenseResponse
     installments_created: int
     installment_group_id: Optional[uuid.UUID] = None
 
 
-class ExpenseSummaryResponse(BaseModel):
+class ExpenseSummaryResponse(CamelModel):
     month: str
     total_in_cents: int
     paid_in_cents: int

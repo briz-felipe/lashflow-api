@@ -63,6 +63,38 @@ class PaymentRepository(BaseRepository[Payment]):
     def delete(self, payment: Payment) -> None:
         self._delete(payment)
 
+    # --- Cash flow with joins ---
+
+    def get_cash_flow(
+        self,
+        professional_id: uuid.UUID,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+    ) -> List[tuple]:
+        """Returns list of (Payment, client_name, procedure_name) tuples."""
+        from app.domain.entities.client import Client
+        from app.domain.entities.appointment import Appointment
+        from app.domain.entities.procedure import Procedure
+
+        stmt = (
+            select(
+                Payment,
+                Client.name.label("client_name"),
+                Procedure.name.label("procedure_name"),
+            )
+            .outerjoin(Client, Payment.client_id == Client.id)
+            .outerjoin(Appointment, Payment.appointment_id == Appointment.id)
+            .outerjoin(Procedure, Appointment.procedure_id == Procedure.id)
+            .where(Payment.professional_id == professional_id)
+        )
+        if from_date:
+            stmt = stmt.where(Payment.created_at >= from_date)
+        if to_date:
+            stmt = stmt.where(Payment.created_at <= to_date)
+        stmt = stmt.order_by(Payment.created_at.desc())
+        rows = self.session.execute(stmt).all()
+        return [(row[0], row[1], row[2]) for row in rows]
+
     # --- Stats queries ---
 
     def get_stats(self, professional_id: uuid.UUID) -> dict:
