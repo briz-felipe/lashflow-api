@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from app.domain.enums import ClientSegment, LashTechnique
+from app.domain.enums import ClientSegment
 from app.domain.services.client_service import normalize_phone, calculate_segments
 
 
@@ -22,70 +22,49 @@ class TestCalculateSegments:
         return datetime.now(timezone.utc)
 
     def test_vip_by_appointment_count(self):
-        segments = calculate_segments(5, 0, self._now(), None, self._now())
+        segments = calculate_segments(5, 0, self._now(), self._now())
         assert ClientSegment.vip in segments
 
     def test_vip_by_total_spent(self):
-        segments = calculate_segments(1, 100_000, self._now(), None, self._now())
+        segments = calculate_segments(1, 100_000, self._now(), self._now())
         assert ClientSegment.vip in segments
 
     def test_not_vip_below_threshold(self):
-        segments = calculate_segments(4, 99_999, self._now(), None, self._now())
+        segments = calculate_segments(4, 99_999, self._now(), self._now())
         assert ClientSegment.vip not in segments
 
     def test_recorrente(self):
         last = self._now() - timedelta(days=20)
-        segments = calculate_segments(2, 0, last, None, self._now())
+        segments = calculate_segments(2, 0, last, self._now())
         assert ClientSegment.recorrente in segments
 
     def test_not_recorrente_old_appointment(self):
         last = self._now() - timedelta(days=50)
-        segments = calculate_segments(2, 0, last, None, self._now())
+        segments = calculate_segments(2, 0, last, self._now())
         assert ClientSegment.recorrente not in segments
 
     def test_not_recorrente_single_appointment(self):
         last = self._now() - timedelta(days=10)
-        segments = calculate_segments(1, 0, last, None, self._now())
+        segments = calculate_segments(1, 0, last, self._now())
         assert ClientSegment.recorrente not in segments
 
     def test_inativa_no_appointments(self):
-        segments = calculate_segments(0, 0, None, None, self._now())
+        segments = calculate_segments(0, 0, None, self._now())
         assert ClientSegment.inativa in segments
 
     def test_inativa_old_appointment(self):
         last = self._now() - timedelta(days=65)
-        segments = calculate_segments(1, 0, last, None, self._now())
+        segments = calculate_segments(1, 0, last, self._now())
         assert ClientSegment.inativa in segments
 
     def test_not_inativa_recent_appointment(self):
         last = self._now() - timedelta(days=30)
-        segments = calculate_segments(3, 0, last, None, self._now())
+        segments = calculate_segments(3, 0, last, self._now())
         assert ClientSegment.inativa not in segments
 
-    def test_volume_segment(self):
-        last = self._now() - timedelta(days=10)
-        segments = calculate_segments(2, 0, last, LashTechnique.volume, self._now())
-        assert ClientSegment.volume in segments
-
-    def test_mega_volume_maps_to_volume_segment(self):
-        last = self._now() - timedelta(days=10)
-        segments = calculate_segments(2, 0, last, LashTechnique.mega_volume, self._now())
-        assert ClientSegment.volume in segments
-
-    def test_classic_segment(self):
-        last = self._now() - timedelta(days=10)
-        segments = calculate_segments(2, 0, last, LashTechnique.classic, self._now())
-        assert ClientSegment.classic in segments
-
-    def test_hybrid_segment(self):
-        last = self._now() - timedelta(days=10)
-        segments = calculate_segments(2, 0, last, LashTechnique.hybrid, self._now())
-        assert ClientSegment.hybrid in segments
-
     def test_multiple_segments_simultaneously(self):
-        # vip + recorrente + volume
+        # vip + recorrente
         last = self._now() - timedelta(days=10)
-        segments = calculate_segments(5, 100_000, last, LashTechnique.volume, self._now())
+        segments = calculate_segments(5, 100_000, last, self._now())
         assert ClientSegment.vip in segments
         assert ClientSegment.recorrente in segments
-        assert ClientSegment.volume in segments

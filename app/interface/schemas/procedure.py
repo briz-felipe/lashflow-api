@@ -2,13 +2,11 @@ import uuid
 from datetime import datetime
 from typing import Optional
 from pydantic import field_validator
-from app.domain.enums import LashTechnique
 from app.interface.schemas.base import CamelModel
 
 
 class ProcedureCreate(CamelModel):
     name: str
-    technique: LashTechnique
     description: Optional[str] = None
     price_in_cents: int
     duration_minutes: int
@@ -31,7 +29,6 @@ class ProcedureCreate(CamelModel):
 
 class ProcedureUpdate(CamelModel):
     name: Optional[str] = None
-    technique: Optional[LashTechnique] = None
     description: Optional[str] = None
     price_in_cents: Optional[int] = None
     duration_minutes: Optional[int] = None
@@ -41,7 +38,6 @@ class ProcedureUpdate(CamelModel):
 class ProcedureResponse(CamelModel):
     id: uuid.UUID
     name: str
-    technique: LashTechnique
     description: Optional[str]
     price_in_cents: int
     duration_minutes: int

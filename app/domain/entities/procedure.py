@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import SQLModel, Field
-from app.domain.enums import LashTechnique
 
 
 class Procedure(SQLModel, table=True):
@@ -12,7 +11,6 @@ class Procedure(SQLModel, table=True):
     professional_id: uuid.UUID = Field(foreign_key="users.id", index=True)
 
     name: str = Field(max_length=200)
-    technique: LashTechnique
     description: Optional[str] = Field(default=None)
     price_in_cents: int = Field(gt=0)
     duration_minutes: int = Field(gt=0)

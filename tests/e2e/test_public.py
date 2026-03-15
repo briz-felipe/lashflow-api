@@ -10,7 +10,6 @@ class TestPublicRoutes:
             "/api/v1/procedures/",
             json={
                 "name": "Classic",
-                "technique": "classic",
                 "price_in_cents": 15000,
                 "duration_minutes": 90,
             },
@@ -38,7 +37,6 @@ class TestPublicRoutes:
             "/api/v1/procedures/",
             json={
                 "name": "Hybrid",
-                "technique": "hybrid",
                 "price_in_cents": 20000,
                 "duration_minutes": 60,
             },
@@ -70,7 +68,6 @@ class TestPublicRoutes:
             "/api/v1/procedures/",
             json={
                 "name": "Removal",
-                "technique": "classic",
                 "price_in_cents": 5000,
                 "duration_minutes": 30,
             },

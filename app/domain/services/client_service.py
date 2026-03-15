@@ -1,6 +1,6 @@
 import re
 from datetime import datetime, timezone
-from app.domain.enums import ClientSegment, LashTechnique
+from app.domain.enums import ClientSegment
 from typing import Optional, List
 
 def normalize_phone(phone: str) -> str:
@@ -12,7 +12,6 @@ def calculate_segments(
     appointments_count: int,
     total_spent_cents: int,
     last_appointment_date: Optional[datetime],
-    most_used_technique: Optional[LashTechnique],
     now: Optional[datetime] = None,
 ) -> List[ClientSegment]:
     """
@@ -23,9 +22,6 @@ def calculate_segments(
     - vip:        appointments_count >= 5 OR total_spent >= R$1000 (100000 cents)
     - recorrente: last appointment < 45 days ago AND appointments_count >= 2
     - inativa:    last appointment > 60 days ago (or never had a completed appointment)
-    - volume:     most used technique is 'volume' or 'mega_volume'
-    - classic:    most used technique is 'classic'
-    - hybrid:     most used technique is 'hybrid'
     """
     now = now or datetime.now(timezone.utc)
     segments: List[ClientSegment] = []
@@ -49,13 +45,5 @@ def calculate_segments(
     else:
         # Never had a completed appointment
         segments.append(ClientSegment.inativa)
-
-    # Technique-based segments
-    if most_used_technique in (LashTechnique.volume, LashTechnique.mega_volume):
-        segments.append(ClientSegment.volume)
-    elif most_used_technique == LashTechnique.classic:
-        segments.append(ClientSegment.classic)
-    elif most_used_technique == LashTechnique.hybrid:
-        segments.append(ClientSegment.hybrid)
 
     return segments
