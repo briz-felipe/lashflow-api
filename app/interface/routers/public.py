@@ -135,4 +135,7 @@ def public_create_appointment(
 
     response = AppointmentResponse.model_validate(created)
     response.ends_at = created.ends_at
+    response.client_name = client.name
+    response.client_phone = client.phone
+    response.procedure_name = procedure.name
     return response
