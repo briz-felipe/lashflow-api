@@ -10,7 +10,7 @@ class AppointmentCreate(CamelModel):
     procedure_id: uuid.UUID
     scheduled_at: datetime
     service_type: Optional[LashServiceType] = None
-    price_charged: int
+    price_charged: Optional[int] = None  # defaults to procedure.price_in_cents if omitted
     notes: Optional[str] = None
 
 
@@ -26,7 +26,10 @@ class AppointmentCancelRequest(CamelModel):
 class AppointmentResponse(CamelModel):
     id: uuid.UUID
     client_id: uuid.UUID
+    client_name: Optional[str] = None
+    client_phone: Optional[str] = None
     procedure_id: uuid.UUID
+    procedure_name: Optional[str] = None
     payment_id: Optional[uuid.UUID]
     service_type: Optional[LashServiceType]
     status: AppointmentStatus

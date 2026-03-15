@@ -10,6 +10,8 @@ from app.infrastructure.repositories.procedure_repository import ProcedureReposi
 from app.infrastructure.repositories.time_slot_repository import TimeSlotRepository
 from app.infrastructure.repositories.blocked_date_repository import BlockedDateRepository
 from app.domain.entities.appointment import Appointment
+from app.domain.entities.client import Client
+from app.domain.entities.procedure import Procedure
 from app.domain.enums import AppointmentStatus, CancelledBy
 from app.domain.services.appointment_service import validate_status_transition
 from app.domain.services.slot_calculator import calculate_available_slots
@@ -25,9 +27,16 @@ from app.interface.schemas.appointment import (
 router = APIRouter(prefix="/appointments", tags=["appointments"])
 
 
-def _to_response(appt: Appointment) -> AppointmentResponse:
+def _to_response(appt: Appointment, session: Session) -> AppointmentResponse:
     data = AppointmentResponse.model_validate(appt)
     data.ends_at = appt.ends_at
+    client = session.get(Client, appt.client_id)
+    if client:
+        data.client_name = client.name
+        data.client_phone = client.phone
+    procedure = session.get(Procedure, appt.procedure_id)
+    if procedure:
+        data.procedure_name = procedure.name
     return data
 
 
@@ -82,7 +91,7 @@ def pending_approvals(
     session: Session = Depends(get_session),
 ):
     repo = AppointmentRepository(session)
-    return [_to_response(a) for a in repo.get_pending_approvals(professional_id)]
+    return [_to_response(a, session) for a in repo.get_pending_approvals(professional_id)]
 
 
 @router.get("/today", response_model=List[AppointmentResponse])
@@ -91,7 +100,7 @@ def today_appointments(
     session: Session = Depends(get_session),
 ):
     repo = AppointmentRepository(session)
-    return [_to_response(a) for a in repo.get_today(professional_id)]
+    return [_to_response(a, session) for a in repo.get_today(professional_id)]
 
 
 @router.get("/", response_model=List[AppointmentResponse])
@@ -111,7 +120,7 @@ def list_appointments(
         from_date=from_date,
         to_date=to_date,
     )
-    return [_to_response(a) for a in appointments]
+    return [_to_response(a, session) for a in appointments]
 
 
 @router.get("/{appointment_id}", response_model=AppointmentResponse)
@@ -124,7 +133,7 @@ def get_appointment(
     appt = repo.get_by_id(professional_id, appointment_id)
     if not appt:
         raise HTTPException(404, "Appointment not found")
-    return _to_response(appt)
+    return _to_response(appt, session)
 
 
 @router.post("/", response_model=AppointmentResponse, status_code=201)
@@ -146,12 +155,12 @@ def create_appointment(
         status=AppointmentStatus.pending_approval,
         scheduled_at=body.scheduled_at,
         duration_minutes=procedure.duration_minutes,
-        price_charged=body.price_charged,
+        price_charged=body.price_charged if body.price_charged is not None else procedure.price_in_cents,
         notes=body.notes,
     )
     repo = AppointmentRepository(session)
     created = repo.create(appt)
-    return _to_response(created)
+    return _to_response(created, session)
 
 
 @router.patch("/{appointment_id}/status", response_model=AppointmentResponse)
@@ -173,7 +182,7 @@ def update_status(
 
     appt.status = body.status
     updated = repo.update(appt)
-    return _to_response(updated)
+    return _to_response(updated, session)
 
 
 @router.patch("/{appointment_id}/cancel", response_model=AppointmentResponse)
@@ -196,4 +205,4 @@ def cancel_appointment(
     appt.cancelled_by = body.cancelled_by
 
     updated = repo.update(appt)
-    return _to_response(updated)
+    return _to_response(updated, session)
