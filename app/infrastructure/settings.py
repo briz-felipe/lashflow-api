@@ -23,9 +23,13 @@ class Settings(BaseSettings):
     # Set True in production (requires HTTPS for Secure cookie flag)
     COOKIE_SECURE: bool = False
 
-    # CORS — comma-separated origins allowed to call the API
-    # Example: "http://localhost:3000,https://app.lashflow.com.br"
+    # CORS — comma-separated exact origins allowed to call the API
+    # Example: "http://localhost:3000,https://lashflow.vercel.app"
     CORS_ORIGINS: str = "http://localhost:3000"
+
+    # CORS regex — for wildcard patterns (Vercel previews, etc.)
+    # Example: "https://lashflow-[a-zA-Z0-9-]+\\.vercel\\.app"
+    CORS_ORIGIN_REGEX: str | None = None
 
     @property
     def cors_origins_list(self) -> list[str]:
