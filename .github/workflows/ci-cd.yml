@@ -95,8 +95,8 @@ jobs:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ vars.SSH_HOST }}
-          username: ${{ vars.SSH_USER }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
@@ -127,5 +127,5 @@ jobs:
             echo "| Autor | ${{ github.event.head_commit.author.name }} |"
             echo "| SHA | \`${{ github.sha }}\` |"
             echo ""
-            echo "> Deploy realizado em \`${{ vars.SSH_HOST }}:8000\`"
+            echo "> Deploy realizado em \`${{ secrets.SSH_HOST }}:8000\`"
           } >> $GITHUB_STEP_SUMMARY
