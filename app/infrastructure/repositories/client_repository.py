@@ -8,7 +8,7 @@ from app.infrastructure.repositories.base import BaseRepository
 from app.domain.entities.client import Client
 from app.domain.entities.appointment import Appointment
 from app.domain.entities.payment import Payment
-from app.domain.enums import AppointmentStatus, LashTechnique
+from app.domain.enums import AppointmentStatus
 
 
 class ClientWithStats:
@@ -18,7 +18,6 @@ class ClientWithStats:
         total_spent: int,
         appointments_count: int,
         last_appointment_date: Optional[datetime],
-        most_used_technique: Optional[str],
     ):
         # Expose all client fields
         for attr in vars(client):
@@ -27,7 +26,6 @@ class ClientWithStats:
         self.total_spent = total_spent
         self.appointments_count = appointments_count
         self.last_appointment_date = last_appointment_date
-        self.most_used_technique = most_used_technique
         # Keep the original entity accessible
         self._client = client
 

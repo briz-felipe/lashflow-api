@@ -15,7 +15,6 @@ def _create_procedure(client_app, auth_headers):
         "/api/v1/procedures/",
         json={
             "name": "Volume",
-            "technique": "volume",
             "price_in_cents": 25000,
             "duration_minutes": 120,
         },
