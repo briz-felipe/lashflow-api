@@ -6,7 +6,7 @@ from sqlmodel import Session
 from app.infrastructure.database import get_session
 from app.infrastructure.repositories.client_repository import ClientRepository
 from app.domain.entities.client import Client
-from app.domain.services.client_service import normalize_phone
+from app.domain.services.client_service import normalize_phone, calculate_segments
 from app.interface.dependencies import get_professional_id
 from app.interface.schemas.client import ClientCreate, ClientUpdate, ClientResponse
 from app.interface.schemas.common import PaginatedResponse
@@ -15,11 +15,12 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 
 
 def _to_response(client: Client, repo: ClientRepository, professional_id: uuid.UUID) -> ClientResponse:
-    total_spent, appointments_count, last_appt = repo.get_stats(professional_id, client.id)
+    total_spent, appointments_count, last_appt, most_used_procedure_name = repo.get_stats(professional_id, client.id)
     data = ClientResponse.model_validate(client)
     data.total_spent = total_spent
     data.appointments_count = appointments_count
     data.last_appointment_date = last_appt
+    data.segments = calculate_segments(appointments_count, total_spent, last_appt, most_used_procedure_name)
     return data
 
 

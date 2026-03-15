@@ -8,6 +8,7 @@ from app.infrastructure.repositories.base import BaseRepository
 from app.domain.entities.client import Client
 from app.domain.entities.appointment import Appointment
 from app.domain.entities.payment import Payment
+from app.domain.entities.procedure import Procedure
 from app.domain.enums import AppointmentStatus
 
 
@@ -98,8 +99,8 @@ class ClientRepository(BaseRepository[Client]):
 
     def get_stats(
         self, professional_id: uuid.UUID, client_id: uuid.UUID
-    ) -> tuple[int, int, Optional[datetime]]:
-        """Returns (total_spent, appointments_count, last_appointment_date)."""
+    ) -> tuple[int, int, Optional[datetime], Optional[str]]:
+        """Returns (total_spent, appointments_count, last_appointment_date, most_used_procedure_name)."""
         # Count completed appointments and get last date
         appt_result = self.session.exec(
             select(
@@ -123,4 +124,19 @@ class ClientRepository(BaseRepository[Client]):
         ).one()
         total_spent = payment_result or 0
 
-        return total_spent, appointments_count, last_appointment_date
+        # Most used procedure name among completed appointments
+        name_result = self.session.exec(
+            select(Procedure.name, func.count(Appointment.id).label("cnt"))
+            .where(
+                Appointment.professional_id == professional_id,
+                Appointment.client_id == client_id,
+                Appointment.status == AppointmentStatus.completed,
+                Appointment.procedure_id == Procedure.id,
+            )
+            .group_by(Procedure.name)
+            .order_by(func.count(Appointment.id).desc())
+            .limit(1)
+        ).first()
+        most_used_procedure_name = name_result[0] if name_result else None
+
+        return total_spent, appointments_count, last_appointment_date, most_used_procedure_name
