@@ -54,6 +54,7 @@ app = FastAPI(
     title="LashFlow API",
     version="0.1.0",
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 # --- CORS ---
