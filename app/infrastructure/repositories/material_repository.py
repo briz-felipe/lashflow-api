@@ -5,7 +5,6 @@ from sqlmodel import select, func
 from app.infrastructure.repositories.base import BaseRepository
 from app.domain.entities.material import Material
 from app.domain.entities.stock_movement import StockMovement
-from app.domain.enums import MaterialCategory
 
 
 class MaterialRepository(BaseRepository[Material]):
@@ -18,7 +17,7 @@ class MaterialRepository(BaseRepository[Material]):
     def list(
         self,
         professional_id: uuid.UUID,
-        category: Optional[MaterialCategory] = None,
+        category: Optional[str] = None,
         search: Optional[str] = None,
         low_stock: bool = False,
         include_inactive: bool = False,

@@ -9,7 +9,6 @@ from app.infrastructure.repositories.material_repository import MaterialReposito
 from app.infrastructure.repositories.stock_movement_repository import StockMovementRepository
 from app.domain.entities.material import Material
 from app.domain.entities.stock_movement import StockMovement
-from app.domain.enums import MaterialCategory
 from app.domain.services.stock_service import apply_movement, is_low_stock
 from app.interface.dependencies import get_professional_id
 from app.interface.schemas.material import (
@@ -53,7 +52,7 @@ def monthly_costs(
 
 @router.get("/materials", response_model=List[MaterialResponse])
 def list_materials(
-    category: Optional[MaterialCategory] = None,
+    category: Optional[str] = None,
     search: Optional[str] = None,
     low_stock: bool = False,
     professional_id: uuid.UUID = Depends(get_professional_id),
