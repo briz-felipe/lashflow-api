@@ -62,7 +62,7 @@ def method_breakdown(
     return MethodBreakdownResponse(**breakdown)
 
 
-@router.get("/by-appointment/{appointment_id}", response_model=PaymentResponse)
+@router.get("/by-appointment/{appointment_id}", response_model=Optional[PaymentResponse])
 def get_by_appointment(
     appointment_id: uuid.UUID,
     professional_id: uuid.UUID = Depends(get_professional_id),
@@ -71,7 +71,7 @@ def get_by_appointment(
     repo = PaymentRepository(session)
     payment = repo.get_by_appointment(professional_id, appointment_id)
     if not payment:
-        raise HTTPException(404, "Payment not found")
+        return None
     return _to_response(payment, repo)
 
 
