@@ -1,3 +1,4 @@
+from fastapi_mcp import FastApiMCP
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request
@@ -134,3 +135,7 @@ app.include_router(expenses_router.router, prefix=PREFIX)
 app.include_router(settings_router.router, prefix=PREFIX)
 app.include_router(dashboard_router.router, prefix=PREFIX)
 app.include_router(public_router.router, prefix=PREFIX)
+
+# --- MCP Server (deve ser montado após todos os routers) ---
+mcp = FastApiMCP(app)
+mcp.mount()
