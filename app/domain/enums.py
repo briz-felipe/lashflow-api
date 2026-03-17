@@ -54,13 +54,6 @@ class ClientSegment(str, Enum):
     inativa = "inativa"
 
 
-class MaterialCategory(str, Enum):
-    essenciais = "essenciais"
-    acessorios = "acessorios"
-    descartaveis = "descartaveis"
-    quimicos = "quimicos"
-    opcionais = "opcionais"
-
 
 class MaterialUnit(str, Enum):
     un = "un"

@@ -1,13 +1,13 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from app.domain.enums import MaterialCategory, MaterialUnit
+from app.domain.enums import MaterialUnit
 from app.interface.schemas.base import CamelModel
 
 
 class MaterialCreate(CamelModel):
     name: str
-    category: MaterialCategory
+    category: str
     unit: MaterialUnit
     unit_cost_in_cents: int
     current_stock: int = 0
@@ -17,7 +17,7 @@ class MaterialCreate(CamelModel):
 
 class MaterialUpdate(CamelModel):
     name: Optional[str] = None
-    category: Optional[MaterialCategory] = None
+    category: Optional[str] = None
     unit: Optional[MaterialUnit] = None
     unit_cost_in_cents: Optional[int] = None
     minimum_stock: Optional[int] = None
@@ -27,7 +27,7 @@ class MaterialUpdate(CamelModel):
 class MaterialResponse(CamelModel):
     id: uuid.UUID
     name: str
-    category: MaterialCategory
+    category: str
     unit: MaterialUnit
     unit_cost_in_cents: int
     current_stock: int
