@@ -13,7 +13,8 @@ from app.domain.entities.appointment import Appointment
 from app.domain.entities.client import Client
 from app.domain.entities.procedure import Procedure
 from app.domain.enums import AppointmentStatus, CancelledBy
-from app.domain.services.appointment_service import validate_status_transition
+from app.domain.services.appointment_service import validate_status_transition, find_conflict
+from app.domain.exceptions import SlotUnavailable
 from app.domain.services.slot_calculator import calculate_available_slots
 from app.interface.dependencies import get_professional_id
 from app.interface.schemas.appointment import (
@@ -147,6 +148,16 @@ def create_appointment(
     if not procedure:
         raise HTTPException(404, "Procedure not found")
 
+    repo = AppointmentRepository(session)
+    existing = repo.get_active_on_date(professional_id, body.scheduled_at.date())
+    conflict = find_conflict(body.scheduled_at, procedure.duration_minutes, existing)
+    if conflict:
+        conflict_client = session.get(Client, conflict.client_id)
+        client_name = conflict_client.name if conflict_client else "outro cliente"
+        raise SlotUnavailable(
+            f"Horário indisponível: {client_name} já tem agendamento nesse horário."
+        )
+
     appt = Appointment(
         professional_id=professional_id,
         client_id=body.client_id,
@@ -158,7 +169,6 @@ def create_appointment(
         price_charged=body.price_charged if body.price_charged is not None else procedure.price_in_cents,
         notes=body.notes,
     )
-    repo = AppointmentRepository(session)
     created = repo.create(appt)
     return _to_response(created, session)
 
