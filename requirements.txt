@@ -8,3 +8,4 @@ python-multipart>=0.0.9
 psycopg2-binary>=2.9.9
 python-dateutil>=2.9.0
 fastapi-mcp>=0.3.0
+alembic>=1.13.0
