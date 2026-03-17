@@ -12,6 +12,7 @@ class AppointmentCreate(CamelModel):
     service_type: Optional[LashServiceType] = None
     price_charged: Optional[int] = None  # defaults to procedure.price_in_cents if omitted
     notes: Optional[str] = None
+    status: Optional[AppointmentStatus] = None  # if omitted, defaults to pending_approval
 
 
 class AppointmentStatusUpdate(CamelModel):

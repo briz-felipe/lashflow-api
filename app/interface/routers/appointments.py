@@ -163,7 +163,7 @@ def create_appointment(
         client_id=body.client_id,
         procedure_id=body.procedure_id,
         service_type=body.service_type,
-        status=AppointmentStatus.pending_approval,
+        status=body.status or AppointmentStatus.pending_approval,
         scheduled_at=body.scheduled_at,
         duration_minutes=procedure.duration_minutes,
         price_charged=body.price_charged if body.price_charged is not None else procedure.price_in_cents,
