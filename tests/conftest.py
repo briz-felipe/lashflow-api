@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, Session, create_engine
@@ -46,8 +47,9 @@ def client_app_fixture(engine, session):
     db_module.engine = engine
 
     app.dependency_overrides[get_session] = override_get_session
-    with TestClient(app, raise_server_exceptions=False) as c:
-        yield c
+    with patch("app.main._run_migrations"):  # skip Alembic in tests; tables created by create_all above
+        with TestClient(app, raise_server_exceptions=False) as c:
+            yield c
     app.dependency_overrides.clear()
     db_module.engine = original_engine
 
