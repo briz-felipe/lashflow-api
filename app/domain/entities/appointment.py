@@ -32,6 +32,9 @@ class Appointment(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    # Apple Calendar sync
+    apple_event_uid: Optional[str] = Field(default=None, max_length=100)
+
     @property
     def ends_at(self) -> datetime:
         return self.scheduled_at + timedelta(minutes=self.duration_minutes)
