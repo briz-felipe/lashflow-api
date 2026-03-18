@@ -31,15 +31,20 @@ def calculate_segments(
     last_appointment_date: Optional[datetime],
     most_used_procedure_name: Optional[str] = None,
     now: Optional[datetime] = None,
+    vip_min_appointments: int = 5,
+    vip_min_spent_cents: int = 100_000,
+    recorrente_max_days: int = 45,
+    recorrente_min_appointments: int = 2,
+    inativa_min_days: int = 60,
 ) -> List[ClientSegment]:
     """
     Calculates all applicable segments for a client.
     A client can have multiple segments simultaneously.
 
-    Rules:
-    - vip:        appointments_count >= 5 OR total_spent >= R$1000 (100000 cents)
-    - recorrente: last appointment < 45 days ago AND appointments_count >= 2
-    - inativa:    last appointment > 60 days ago (or never had a completed appointment)
+    Rules (configurable thresholds):
+    - vip:        appointments_count >= vip_min_appointments OR total_spent >= vip_min_spent_cents
+    - recorrente: last appointment < recorrente_max_days ago AND appointments_count >= recorrente_min_appointments
+    - inativa:    last appointment > inativa_min_days ago (or never had a completed appointment)
     - volume:     most used procedure name contains 'volume' or 'mega volume'
     - classic:    most used procedure name contains 'classic'
     - hybrid:     most used procedure name contains 'hybrid'
@@ -48,7 +53,7 @@ def calculate_segments(
     segments: List[ClientSegment] = []
 
     # VIP
-    if appointments_count >= 5 or total_spent_cents >= 100_000:
+    if appointments_count >= vip_min_appointments or total_spent_cents >= vip_min_spent_cents:
         segments.append(ClientSegment.vip)
 
     # Recorrente / Inativa
@@ -58,9 +63,9 @@ def calculate_segments(
             last = last.replace(tzinfo=timezone.utc)
         delta_days = (now - last).days
 
-        if delta_days < 45 and appointments_count >= 2:
+        if delta_days < recorrente_max_days and appointments_count >= recorrente_min_appointments:
             segments.append(ClientSegment.recorrente)
-        if delta_days > 60:
+        if delta_days > inativa_min_days:
             segments.append(ClientSegment.inativa)
     else:
         segments.append(ClientSegment.inativa)

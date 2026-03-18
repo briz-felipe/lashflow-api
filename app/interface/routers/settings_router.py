@@ -6,6 +6,7 @@ from app.infrastructure.database import get_session
 from app.infrastructure.repositories.time_slot_repository import TimeSlotRepository
 from app.infrastructure.repositories.blocked_date_repository import BlockedDateRepository
 from app.infrastructure.repositories.whatsapp_template_repository import WhatsAppTemplateRepository
+from app.infrastructure.repositories.professional_settings_repository import ProfessionalSettingsRepository
 from app.domain.entities.time_slot import TimeSlot
 from app.domain.entities.blocked_date import BlockedDate
 from app.domain.entities.whatsapp_template import WhatsAppTemplate, _slugify
@@ -17,6 +18,8 @@ from app.interface.schemas.whatsapp_template import (
     WhatsAppTemplateUpdate,
     WhatsAppTemplateResponse,
 )
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -158,3 +161,43 @@ def delete_whatsapp_template(
     if not template:
         raise HTTPException(404, "Template not found")
     repo.delete(template)
+
+
+# ── Segment Rules ─────────────────────────────────────────────────────────────
+
+class SegmentRulesResponse(BaseModel):
+    vipMinAppointments: int
+    vipMinSpentCents: int
+    recorrenteMaxDays: int
+    recorrenteMinAppointments: int
+    inativaMinDays: int
+
+
+class SegmentRulesUpdate(BaseModel):
+    vipMinAppointments: Optional[int] = None
+    vipMinSpentCents: Optional[int] = None
+    recorrenteMaxDays: Optional[int] = None
+    recorrenteMinAppointments: Optional[int] = None
+    inativaMinDays: Optional[int] = None
+
+
+@router.get("/segment-rules", response_model=SegmentRulesResponse)
+def get_segment_rules(
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ProfessionalSettingsRepository(session)
+    return repo.get_segment_rules(professional_id)
+
+
+@router.put("/segment-rules", response_model=SegmentRulesResponse)
+def update_segment_rules(
+    body: SegmentRulesUpdate,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = ProfessionalSettingsRepository(session)
+    current = repo.get_segment_rules(professional_id)
+    updates = body.model_dump(exclude_none=True)
+    merged = {**current, **updates}
+    return repo.save_segment_rules(professional_id, merged)

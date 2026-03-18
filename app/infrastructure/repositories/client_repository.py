@@ -140,3 +140,61 @@ class ClientRepository(BaseRepository[Client]):
         most_used_procedure_name = name_result[0] if name_result else None
 
         return total_spent, appointments_count, last_appointment_date, most_used_procedure_name
+
+    def list_all(
+        self,
+        professional_id: uuid.UUID,
+        search: Optional[str] = None,
+    ) -> List[Client]:
+        """Fetch all clients (no pagination) for in-memory processing."""
+        stmt = self._base_query(professional_id)
+        if search:
+            term = f"%{search}%"
+            stmt = stmt.where(
+                (Client.name.ilike(term))
+                | (Client.phone.ilike(term))
+                | (Client.email.ilike(term))
+            )
+        return list(self.session.exec(stmt).all())
+
+    def get_stats_batch(
+        self,
+        professional_id: uuid.UUID,
+        client_ids: List[uuid.UUID],
+    ) -> dict:
+        """Returns {client_id_str: (total_spent, appointments_count, last_appointment_date)}"""
+        if not client_ids:
+            return {}
+
+        appt_rows = self.session.exec(
+            select(
+                Appointment.client_id,
+                func.count(Appointment.id),
+                func.max(Appointment.scheduled_at),
+            ).where(
+                Appointment.professional_id == professional_id,
+                Appointment.client_id.in_(client_ids),
+                Appointment.status == AppointmentStatus.completed,
+            ).group_by(Appointment.client_id)
+        ).all()
+
+        pay_rows = self.session.exec(
+            select(
+                Payment.client_id,
+                func.coalesce(func.sum(Payment.paid_amount_in_cents), 0),
+            ).where(
+                Payment.professional_id == professional_id,
+                Payment.client_id.in_(client_ids),
+            ).group_by(Payment.client_id)
+        ).all()
+
+        appt_map = {str(r[0]): (r[1] or 0, r[2]) for r in appt_rows}
+        pay_map = {str(r[0]): (r[1] or 0) for r in pay_rows}
+
+        result = {}
+        for cid in client_ids:
+            sid = str(cid)
+            count, last = appt_map.get(sid, (0, None))
+            spent = pay_map.get(sid, 0)
+            result[sid] = (spent, count, last)
+        return result
