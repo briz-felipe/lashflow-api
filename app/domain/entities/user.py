@@ -15,3 +15,13 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Salon profile (white-label)
+    salon_name: Optional[str] = Field(default=None, max_length=100)
+    salon_slug: Optional[str] = Field(default=None, max_length=50, index=True)
+    salon_address: Optional[str] = Field(default=None, max_length=300)
+
+    # Apple Calendar integration
+    apple_id: Optional[str] = Field(default=None, max_length=200)
+    apple_password_encrypted: Optional[str] = Field(default=None)
+    apple_calendar_name: Optional[str] = Field(default=None, max_length=200)

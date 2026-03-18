@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     OAUTH2_CLIENT_ID: str | None = None
     OAUTH2_CLIENT_SECRET: str | None = None
 
+    # Key for encrypting Apple App-Specific Passwords in the DB.
+    APPLE_ENCRYPTION_KEY: str | None = None
+
     # Set True in production (requires HTTPS for Secure cookie flag)
     COOKIE_SECURE: bool = False
 

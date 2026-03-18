@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, text
 
-from app.infrastructure.database import create_db_and_tables, engine
+from app.infrastructure.database import create_db_and_tables
+import app.infrastructure.database as _db
 from app.infrastructure.settings import settings
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.domain.entities.user import User
@@ -29,6 +30,7 @@ from app.interface.routers import expenses as expenses_router
 from app.interface.routers import settings_router
 from app.interface.routers import dashboard as dashboard_router
 from app.interface.routers import public as public_router
+from app.interface.routers import integrations_router
 
 
 @asynccontextmanager
@@ -37,7 +39,7 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
 
     # Seed admin user if no users exist
-    with Session(engine) as session:
+    with Session(_db.engine) as session:
         repo = UserRepository(session)
         if not repo.exists_any():
             admin = User(
@@ -135,6 +137,7 @@ app.include_router(expenses_router.router, prefix=PREFIX)
 app.include_router(settings_router.router, prefix=PREFIX)
 app.include_router(dashboard_router.router, prefix=PREFIX)
 app.include_router(public_router.router, prefix=PREFIX)
+app.include_router(integrations_router.router, prefix=PREFIX)
 
 # --- MCP Server (deve ser montado após todos os routers) ---
 mcp = FastApiMCP(app)

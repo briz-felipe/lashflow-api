@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlmodel import Session
 
 from app.infrastructure.database import get_session
@@ -16,6 +16,7 @@ from app.domain.enums import AppointmentStatus, CancelledBy
 from app.domain.services.appointment_service import validate_status_transition, find_conflict
 from app.domain.exceptions import SlotUnavailable
 from app.domain.services.slot_calculator import calculate_available_slots
+from app.domain.services import calendar_sync_service
 from app.interface.dependencies import get_professional_id
 from app.interface.schemas.appointment import (
     AppointmentCreate,
@@ -140,6 +141,7 @@ def get_appointment(
 @router.post("/", response_model=AppointmentResponse, status_code=201)
 def create_appointment(
     body: AppointmentCreate,
+    background_tasks: BackgroundTasks,
     professional_id: uuid.UUID = Depends(get_professional_id),
     session: Session = Depends(get_session),
 ):
@@ -158,18 +160,24 @@ def create_appointment(
             f"Horário indisponível: {client_name} já tem agendamento nesse horário."
         )
 
+    initial_status = body.status or AppointmentStatus.pending_approval
     appt = Appointment(
         professional_id=professional_id,
         client_id=body.client_id,
         procedure_id=body.procedure_id,
         service_type=body.service_type,
-        status=body.status or AppointmentStatus.pending_approval,
+        status=initial_status,
         scheduled_at=body.scheduled_at,
         duration_minutes=procedure.duration_minutes,
         price_charged=body.price_charged if body.price_charged is not None else procedure.price_in_cents,
         notes=body.notes,
     )
     created = repo.create(appt)
+
+    # Sync confirmed appointments to Apple Calendar
+    if initial_status == AppointmentStatus.confirmed:
+        background_tasks.add_task(calendar_sync_service.sync_create, created, session)
+
     return _to_response(created, session)
 
 
@@ -177,6 +185,7 @@ def create_appointment(
 def update_status(
     appointment_id: uuid.UUID,
     body: AppointmentStatusUpdate,
+    background_tasks: BackgroundTasks,
     professional_id: uuid.UUID = Depends(get_professional_id),
     session: Session = Depends(get_session),
 ):
@@ -192,6 +201,13 @@ def update_status(
 
     appt.status = body.status
     updated = repo.update(appt)
+
+    # Sync to Apple Calendar
+    if body.status == AppointmentStatus.confirmed:
+        background_tasks.add_task(calendar_sync_service.sync_create, updated, session)
+    elif body.status == AppointmentStatus.cancelled:
+        background_tasks.add_task(calendar_sync_service.sync_delete, updated, session)
+
     return _to_response(updated, session)
 
 
@@ -199,6 +215,7 @@ def update_status(
 def cancel_appointment(
     appointment_id: uuid.UUID,
     body: AppointmentCancelRequest,
+    background_tasks: BackgroundTasks,
     professional_id: uuid.UUID = Depends(get_professional_id),
     session: Session = Depends(get_session),
 ):
@@ -215,4 +232,5 @@ def cancel_appointment(
     appt.cancelled_by = body.cancelled_by
 
     updated = repo.update(appt)
+    background_tasks.add_task(calendar_sync_service.sync_delete, updated, session)
     return _to_response(updated, session)

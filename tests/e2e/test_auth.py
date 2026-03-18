@@ -2,7 +2,7 @@ class TestLogin:
     def test_login_returns_token(self, client_app, admin_user):
         resp = client_app.post(
             "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
+            json={"username": "testadmin", "password": "admin123"},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -12,7 +12,7 @@ class TestLogin:
     def test_login_invalid_credentials(self, client_app, admin_user):
         resp = client_app.post(
             "/api/v1/auth/login",
-            json={"username": "admin", "password": "wrongpass"},
+            json={"username": "testadmin", "password": "wrongpass"},
         )
         assert resp.status_code == 401
 

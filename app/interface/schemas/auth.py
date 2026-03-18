@@ -41,3 +41,16 @@ class MeResponse(CamelModel):
     is_superuser: bool
     is_active: bool
     created_at: datetime
+    # Salon profile
+    salon_name: Optional[str] = None
+    salon_slug: Optional[str] = None
+    salon_address: Optional[str] = None
+    # Apple Calendar status (no credentials exposed)
+    apple_calendar_connected: bool = False
+    apple_calendar_name: Optional[str] = None
+
+
+class ProfileUpdate(CamelModel):
+    salon_name: Optional[str] = None
+    salon_slug: Optional[str] = None
+    salon_address: Optional[str] = None
