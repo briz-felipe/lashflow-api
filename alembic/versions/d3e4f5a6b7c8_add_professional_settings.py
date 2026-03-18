@@ -18,6 +18,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if 'professional_settings' in inspector.get_table_names():
+        return
     op.create_table(
         'professional_settings',
         sa.Column('professional_id', sa.Uuid(), nullable=False),
