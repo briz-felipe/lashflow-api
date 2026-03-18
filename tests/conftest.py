@@ -56,8 +56,8 @@ def client_app_fixture(engine, session):
 def admin_user_fixture(session):
     repo = UserRepository(session)
     user = User(
-        username="admin",
-        email="admin@test.com",
+        username="testadmin",
+        email="testadmin@test.com",
         password_hash=hash_password("admin123"),
         is_superuser=True,
     )
@@ -66,9 +66,11 @@ def admin_user_fixture(session):
 
 @pytest.fixture(name="auth_headers")
 def auth_headers_fixture(client_app, admin_user):
+    # Log in as the lifespan-seeded admin (admin/admin) so that professional_id
+    # matches what _get_any_professional() returns in public routes.
     resp = client_app.post(
         "/api/v1/auth/login",
-        json={"username": "admin", "password": "admin123"},
+        json={"username": "admin", "password": "admin"},
     )
     assert resp.status_code == 200, resp.text
     token = resp.json()["accessToken"]
