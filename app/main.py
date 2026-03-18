@@ -8,6 +8,9 @@ from sqlmodel import Session, text
 
 from app.infrastructure.database import create_db_and_tables
 import app.infrastructure.database as _db
+from alembic.config import Config as AlembicConfig
+from alembic import command as alembic_command
+import os
 from app.infrastructure.settings import settings
 from app.infrastructure.repositories.user_repository import UserRepository
 from app.domain.entities.user import User
@@ -33,10 +36,22 @@ from app.interface.routers import public as public_router
 from app.interface.routers import integrations_router
 
 
+def _run_migrations() -> None:
+    """Run any pending Alembic migrations on startup."""
+    try:
+        ini_path = os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
+        cfg = AlembicConfig(os.path.abspath(ini_path))
+        alembic_command.upgrade(cfg, "head")
+    except Exception as e:
+        # Don't crash the server if migrations fail — log and continue
+        import logging
+        logging.getLogger(__name__).error("Alembic migration failed: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables
-    create_db_and_tables()
+    # Run DB migrations (creates tables + applies pending ALTER TABLE, etc.)
+    _run_migrations()
 
     # Seed admin user if no users exist
     with Session(_db.engine) as session:
