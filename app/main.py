@@ -6,7 +6,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, text
 
-from app.infrastructure.database import create_db_and_tables
 import app.infrastructure.database as _db
 from alembic.config import Config as AlembicConfig
 from alembic import command as alembic_command
