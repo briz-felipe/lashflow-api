@@ -33,6 +33,9 @@ def find_conflict(
     exclude_id=None,
 ) -> Optional[Appointment]:
     """Returns the first appointment from `existing` that overlaps the new slot, or None."""
+    # DB stores naive datetimes; strip tzinfo if the incoming value is aware
+    if scheduled_at.tzinfo is not None:
+        scheduled_at = scheduled_at.replace(tzinfo=None)
     new_end = scheduled_at + timedelta(minutes=duration_minutes)
     for appt in existing:
         if appt.id == exclude_id:
