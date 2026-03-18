@@ -9,6 +9,7 @@ from app.infrastructure.repositories.appointment_repository import AppointmentRe
 from app.infrastructure.repositories.client_repository import ClientRepository
 from app.domain.entities.appointment import Appointment
 from app.domain.entities.client import Client
+from app.domain.entities.procedure import Procedure
 from app.domain.enums import AppointmentStatus
 from app.interface.dependencies import get_professional_id
 from app.interface.schemas.dashboard import DashboardStatsResponse, DashboardTodayResponse
@@ -16,6 +17,19 @@ from app.interface.schemas.payment import PaymentStatsResponse, MonthlyRevenueIt
 from app.interface.schemas.appointment import AppointmentResponse
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+
+def _appt_to_response(a: Appointment, session: Session) -> AppointmentResponse:
+    data = AppointmentResponse.model_validate(a)
+    data.ends_at = a.ends_at
+    client = session.get(Client, a.client_id)
+    if client:
+        data.client_name = client.name
+        data.client_phone = client.phone
+    procedure = session.get(Procedure, a.procedure_id)
+    if procedure:
+        data.procedure_name = procedure.name
+    return data
 
 
 @router.get("/stats", response_model=DashboardStatsResponse)
@@ -71,9 +85,6 @@ def dashboard_today(
     pending_count = len(appt_repo.get_pending_approvals(professional_id))
 
     return DashboardTodayResponse(
-        appointments=[
-            AppointmentResponse.model_validate(a) | {"ends_at": a.ends_at}
-            for a in today
-        ],
+        appointments=[_appt_to_response(a, session) for a in today],
         pending_approvals_count=pending_count,
     )
