@@ -25,9 +25,26 @@ from app.interface.schemas.auth import (
     RefreshRequest,
     TokenValidateResponse,
     MeResponse,
+    ProfileUpdate,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _user_to_me(user: User) -> MeResponse:
+    return MeResponse(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        is_superuser=user.is_superuser,
+        is_active=user.is_active,
+        created_at=user.created_at,
+        salon_name=user.salon_name,
+        salon_slug=user.salon_slug,
+        salon_address=user.salon_address,
+        apple_calendar_connected=bool(user.apple_id and user.apple_password_encrypted),
+        apple_calendar_name=user.apple_calendar_name,
+    )
 
 
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
@@ -60,12 +77,6 @@ def token(
     form: OAuth2PasswordRequestForm = Depends(),
     session: Session = Depends(get_session),
 ):
-    """OAuth2 form-data endpoint used by Swagger UI and machine clients (e.g. Next.js BFF).
-
-    If OAUTH2_CLIENT_ID and OAUTH2_CLIENT_SECRET are set in the environment, the request
-    must supply matching client_id and client_secret fields (standard OAuth2 password grant).
-    Leave those env vars unset to skip client validation (useful for Swagger UI / local dev).
-    """
     if settings.oauth2_client_auth_enabled:
         if form.client_id != settings.OAUTH2_CLIENT_ID or form.client_secret != settings.OAUTH2_CLIENT_SECRET:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid client credentials")
@@ -104,7 +115,6 @@ def login(body: LoginRequest, response: Response, session: Session = Depends(get
 
 @router.post("/logout", status_code=204)
 def logout(response: Response):
-    """Clears auth cookies. Works for both cookie-based and header-based sessions."""
     _clear_auth_cookies(response)
 
 
@@ -126,46 +136,42 @@ def register(
         password_hash=hash_password(body.password),
     )
     created = repo.create(user)
-    return MeResponse(
-        id=created.id,
-        username=created.username,
-        email=created.email,
-        is_superuser=created.is_superuser,
-        is_active=created.is_active,
-        created_at=created.created_at,
-    )
+    return _user_to_me(created)
 
 
 @router.get("/me", response_model=MeResponse)
 def me(current_user: User = Depends(get_current_user)):
-    return MeResponse(
-        id=current_user.id,
-        username=current_user.username,
-        email=current_user.email,
-        is_superuser=current_user.is_superuser,
-        is_active=current_user.is_active,
-        created_at=current_user.created_at,
-    )
+    return _user_to_me(current_user)
+
+
+@router.put("/profile", response_model=MeResponse)
+def update_profile(
+    body: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    repo = UserRepository(session)
+    if body.salon_name is not None:
+        current_user.salon_name = body.salon_name
+    if body.salon_slug is not None:
+        slug = body.salon_slug.strip().lower().replace(" ", "-")
+        current_user.salon_slug = slug
+    if body.salon_address is not None:
+        current_user.salon_address = body.salon_address
+    updated = repo.update(current_user)
+    return _user_to_me(updated)
 
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(request: Request, response: Response, session: Session = Depends(get_session)):
-    """Exchange a valid refresh token for a new access + refresh token pair.
-
-    Accepts the token from either:
-    - JSON body: { "refresh_token": "eyJ..." }
-    - Cookie: refresh_token (set automatically on login)
-    """
     refresh_token_value: str | None = None
 
-    # Try JSON body first
     try:
         body = await request.json()
         refresh_token_value = body.get("refresh_token")
     except Exception:
         pass
 
-    # Fall back to cookie
     if not refresh_token_value:
         refresh_token_value = request.cookies.get("refresh_token")
 
@@ -197,7 +203,6 @@ async def refresh(request: Request, response: Response, session: Session = Depen
 
 @router.get("/validate", response_model=TokenValidateResponse)
 def validate_token(current_user: User = Depends(get_current_user)):
-    """Validates the current access token (Bearer header or cookie) and returns user info."""
     return TokenValidateResponse(
         valid=True,
         user_id=current_user.id,
@@ -207,7 +212,6 @@ def validate_token(current_user: User = Depends(get_current_user)):
 
 @router.post("/validate", response_model=TokenValidateResponse)
 def validate_token_body(body: RefreshRequest, session: Session = Depends(get_session)):
-    """Validates any token (access or refresh) passed in the body. Returns validity + expiry."""
     try:
         payload = decode_token(body.refresh_token)
         exp = payload.get("exp")
