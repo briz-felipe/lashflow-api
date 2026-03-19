@@ -1,7 +1,5 @@
 import uuid
-import calendar
-from datetime import datetime, date
-from collections import defaultdict
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
@@ -18,7 +16,7 @@ from app.domain.enums import AppointmentStatus
 from app.domain.services.client_service import normalize_phone
 from app.domain.services.slot_calculator import calculate_available_slots
 from app.interface.schemas.procedure import ProcedureResponse
-from app.interface.schemas.appointment import AppointmentResponse, AvailableSlotsResponse, AvailableDatesResponse
+from app.interface.schemas.appointment import AppointmentResponse, AvailableSlotsResponse
 from pydantic import BaseModel
 from typing import Optional, List
 
@@ -35,31 +33,62 @@ class PublicAppointmentCreate(BaseModel):
     scheduled_at: datetime
     client: PublicClientInput
     notes: Optional[str] = None
+    slug: str
 
 
-def _get_any_professional(session: Session) -> Optional[User]:
-    """In single-tenant mode, return the first (and only) professional."""
-    return session.exec(select(User).where(User.is_active == True).limit(1)).first()  # noqa: E712
+class PublicSalonResponse(BaseModel):
+    slug: str
+    salon_name: Optional[str] = None
+    salon_address: Optional[str] = None
+
+
+def _get_professional_by_slug(slug: str, session: Session) -> Optional[User]:
+    """Look up professional by salon_slug; fallback to username for users without a slug."""
+    user = session.exec(
+        select(User).where(User.salon_slug == slug, User.is_active == True)  # noqa: E712
+    ).first()
+    if user:
+        return user
+    # Fallback: allow login username as slug (users who haven't configured salon_slug yet)
+    return session.exec(
+        select(User).where(User.username == slug, User.is_active == True)  # noqa: E712
+    ).first()
+
+
+@router.get("/salon/{slug}", response_model=PublicSalonResponse)
+def public_salon_info(slug: str, session: Session = Depends(get_session)):
+    professional = _get_professional_by_slug(slug, session)
+    if not professional:
+        raise HTTPException(404, "Salon not found")
+    return PublicSalonResponse(
+        slug=slug,
+        salon_name=professional.salon_name,
+        salon_address=professional.salon_address,
+    )
 
 
 @router.get("/procedures", response_model=List[ProcedureResponse])
-def public_procedures(session: Session = Depends(get_session)):
-    professional = _get_any_professional(session)
+def public_procedures(
+    slug: str = Query(..., description="Salon slug"),
+    session: Session = Depends(get_session),
+):
+    professional = _get_professional_by_slug(slug, session)
     if not professional:
-        return []
+        raise HTTPException(404, "Salon not found")
     repo = ProcedureRepository(session)
     return repo.list(professional.id, active_only=True)
 
 
 @router.get("/available-slots", response_model=AvailableSlotsResponse)
 def public_available_slots(
+    slug: str = Query(..., description="Salon slug"),
     date: str = Query(..., description="YYYY-MM-DD"),
     procedure_id: uuid.UUID = Query(...),
     session: Session = Depends(get_session),
 ):
-    professional = _get_any_professional(session)
+    professional = _get_professional_by_slug(slug, session)
     if not professional:
-        return AvailableSlotsResponse(slots=[])
+        raise HTTPException(404, "Salon not found")
 
     try:
         target_date = datetime.strptime(date, "%Y-%m-%d").date()
@@ -98,16 +127,15 @@ def public_create_appointment(
     body: PublicAppointmentCreate,
     session: Session = Depends(get_session),
 ):
-    professional = _get_any_professional(session)
+    professional = _get_professional_by_slug(body.slug, session)
     if not professional:
-        raise HTTPException(503, "Service unavailable")
+        raise HTTPException(404, "Salon not found")
 
     proc_repo = ProcedureRepository(session)
     procedure = proc_repo.get_by_id(professional.id, body.procedure_id)
     if not procedure or not procedure.is_active:
         raise HTTPException(404, "Procedure not found or inactive")
 
-    # Find or create client by normalized phone
     client_repo = ClientRepository(session)
     phone = normalize_phone(body.client.phone)
     client = client_repo.get_by_phone(professional.id, phone)

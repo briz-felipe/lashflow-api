@@ -4,11 +4,13 @@ services:
       context: .
       dockerfile: Dockerfile
       target: builder
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     ports:
       - "8001:8000"
     volumes:
       - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
     environment:
       DATABASE_URL: postgresql+psycopg2://lashflow:lashflow@db:5432/lashflow
       SECRET_KEY: dev-secret-key-change-in-prod
