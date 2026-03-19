@@ -19,8 +19,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('appointments', sa.Column('apple_event_uid', sqlmodel.sql.sqltypes.AutoString(length=100), nullable=True))
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing = {c["name"] for c in inspector.get_columns("appointments")}
+    if "apple_event_uid" not in existing:
+        op.add_column("appointments", sa.Column("apple_event_uid", sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column('appointments', 'apple_event_uid')
+    op.drop_column("appointments", "apple_event_uid")

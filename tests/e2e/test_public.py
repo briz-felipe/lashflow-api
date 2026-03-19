@@ -1,6 +1,6 @@
 class TestPublicRoutes:
     def test_public_procedures_no_auth(self, client_app):
-        resp = client_app.get("/api/v1/public/procedures")
+        resp = client_app.get("/api/v1/public/procedures", params={"slug": "admin"})
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)
 
@@ -27,7 +27,7 @@ class TestPublicRoutes:
         # Query slots as public (no auth)
         resp = client_app.get(
             "/api/v1/public/available-slots",
-            params={"date": "2030-01-06", "procedure_id": procedure_id},
+            params={"slug": "admin", "date": "2030-01-06", "procedure_id": procedure_id},
         )
         assert resp.status_code == 200
         assert "slots" in resp.json()
@@ -47,6 +47,7 @@ class TestPublicRoutes:
         resp = client_app.post(
             "/api/v1/public/appointments",
             json={
+                "slug": "admin",
                 "procedure_id": procedure_id,
                 "scheduled_at": "2030-06-20T10:00:00",
                 "client": {"name": "Ana Pública", "phone": "(11) 98765-4321"},
@@ -79,6 +80,7 @@ class TestPublicRoutes:
         resp = client_app.post(
             "/api/v1/public/appointments",
             json={
+                "slug": "admin",
                 "procedure_id": procedure_id,
                 "scheduled_at": "2030-06-21T10:00:00",
                 "client": {"name": "Any Name", "phone": "(11) 98765-4321"},
