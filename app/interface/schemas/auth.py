@@ -45,6 +45,8 @@ class MeResponse(CamelModel):
     salon_name: Optional[str] = None
     salon_slug: Optional[str] = None
     salon_address: Optional[str] = None
+    # LashFlow cycle settings
+    maintenance_cycle_days: int = 15
     # Apple Calendar status (no credentials exposed)
     apple_calendar_connected: bool = False
     apple_calendar_name: Optional[str] = None
@@ -54,3 +56,4 @@ class ProfileUpdate(CamelModel):
     salon_name: Optional[str] = None
     salon_slug: Optional[str] = None
     salon_address: Optional[str] = None
+    maintenance_cycle_days: Optional[int] = None
