@@ -41,6 +41,7 @@ class LashServiceType(str, Enum):
     application = "application"
     maintenance = "maintenance"
     removal = "removal"
+    removal_application = "removal_application"
     lash_lifting = "lash_lifting"
     permanent = "permanent"
 

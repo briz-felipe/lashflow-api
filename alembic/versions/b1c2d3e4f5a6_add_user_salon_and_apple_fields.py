@@ -7,6 +7,7 @@ Create Date: 2026-03-18 00:00:00.000000
 """
 from typing import Sequence, Union
 from alembic import op
+import sqlalchemy as sa
 
 
 revision: str = 'b1c2d3e4f5a6'
@@ -15,29 +16,36 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _column_exists(table: str, column: str) -> bool:
+    bind = op.get_bind()
+    result = bind.execute(sa.text(f"PRAGMA table_info({table})"))
+    return any(row[1] == column for row in result)
+
+
 def upgrade() -> None:
-    op.execute("""
-        ALTER TABLE users
-            ADD COLUMN IF NOT EXISTS salon_name    VARCHAR(200),
-            ADD COLUMN IF NOT EXISTS salon_slug    VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS salon_address TEXT,
-            ADD COLUMN IF NOT EXISTS apple_id      VARCHAR(200),
-            ADD COLUMN IF NOT EXISTS apple_password_encrypted TEXT,
-            ADD COLUMN IF NOT EXISTS apple_calendar_name      VARCHAR(200)
-    """)
-    op.execute("""
-        CREATE INDEX IF NOT EXISTS ix_users_salon_slug ON users (salon_slug)
-    """)
+    if not _column_exists('users', 'salon_name'):
+        op.add_column('users', sa.Column('salon_name', sa.String(200), nullable=True))
+    if not _column_exists('users', 'salon_slug'):
+        op.add_column('users', sa.Column('salon_slug', sa.String(100), nullable=True))
+    if not _column_exists('users', 'salon_address'):
+        op.add_column('users', sa.Column('salon_address', sa.Text(), nullable=True))
+    if not _column_exists('users', 'apple_id'):
+        op.add_column('users', sa.Column('apple_id', sa.String(200), nullable=True))
+    if not _column_exists('users', 'apple_password_encrypted'):
+        op.add_column('users', sa.Column('apple_password_encrypted', sa.Text(), nullable=True))
+    if not _column_exists('users', 'apple_calendar_name'):
+        op.add_column('users', sa.Column('apple_calendar_name', sa.String(200), nullable=True))
+
+    # Create index only if not exists (SQLite-safe)
+    bind = op.get_bind()
+    indexes = bind.execute(sa.text("SELECT name FROM sqlite_master WHERE type='index' AND name='ix_users_salon_slug'")).fetchall()
+    if not indexes:
+        op.create_index('ix_users_salon_slug', 'users', ['salon_slug'], unique=False)
 
 
 def downgrade() -> None:
-    op.execute("DROP INDEX IF EXISTS ix_users_salon_slug")
-    op.execute("""
-        ALTER TABLE users
-            DROP COLUMN IF EXISTS apple_calendar_name,
-            DROP COLUMN IF EXISTS apple_password_encrypted,
-            DROP COLUMN IF EXISTS apple_id,
-            DROP COLUMN IF EXISTS salon_address,
-            DROP COLUMN IF EXISTS salon_slug,
-            DROP COLUMN IF EXISTS salon_name
-    """)
+    bind = op.get_bind()
+    indexes = bind.execute(sa.text("SELECT name FROM sqlite_master WHERE type='index' AND name='ix_users_salon_slug'")).fetchall()
+    if indexes:
+        op.drop_index('ix_users_salon_slug', table_name='users')
+    # SQLite does not support DROP COLUMN in older versions; skip for safety
