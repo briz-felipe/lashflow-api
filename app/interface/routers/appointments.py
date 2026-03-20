@@ -36,9 +36,12 @@ def _to_response(appt: Appointment, session: Session) -> AppointmentResponse:
     if client:
         data.client_name = client.name
         data.client_phone = client.phone
-    procedure = session.get(Procedure, appt.procedure_id)
-    if procedure:
-        data.procedure_name = procedure.name
+    if appt.procedure_name_override:
+        data.procedure_name = appt.procedure_name_override
+    else:
+        procedure = session.get(Procedure, appt.procedure_id)
+        if procedure:
+            data.procedure_name = procedure.name
     return data
 
 
@@ -172,7 +175,7 @@ def create_appointment(
         duration_minutes=effective_duration,
         price_charged=body.price_charged if body.price_charged is not None else procedure.price_in_cents,
         notes=body.notes,
-        procedure_name_override=body.procedure_name,
+        procedure_name_override=body.procedure_name if body.procedure_name else None,
     )
     created = repo.create(appt)
 
