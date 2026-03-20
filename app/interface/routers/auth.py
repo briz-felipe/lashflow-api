@@ -158,6 +158,8 @@ def update_profile(
         current_user.salon_slug = slug
     if body.salon_address is not None:
         current_user.salon_address = body.salon_address
+    if body.maintenance_cycle_days is not None:
+        current_user.maintenance_cycle_days = max(7, min(60, body.maintenance_cycle_days))
     updated = repo.update(current_user)
     return _user_to_me(updated)
 

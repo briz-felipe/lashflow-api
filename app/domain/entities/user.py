@@ -21,6 +21,9 @@ class User(SQLModel, table=True):
     salon_slug: Optional[str] = Field(default=None, max_length=50, index=True)
     salon_address: Optional[str] = Field(default=None, max_length=300)
 
+    # LashFlow cycle settings
+    maintenance_cycle_days: int = Field(default=15)
+
     # Apple Calendar integration
     apple_id: Optional[str] = Field(default=None, max_length=200)
     apple_password_encrypted: Optional[str] = Field(default=None)
