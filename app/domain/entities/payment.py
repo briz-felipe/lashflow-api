@@ -24,7 +24,10 @@ class Payment(SQLModel, table=True):
     appointment_id: uuid.UUID = Field(foreign_key="appointments.id", unique=True, index=True)
     client_id: uuid.UUID = Field(foreign_key="clients.id", index=True)
 
-    total_amount_in_cents: int = Field(ge=0)
+    subtotal_amount_in_cents: int = Field(default=0, ge=0)   # preço original do procedimento
+    discount_amount_in_cents: int = Field(default=0, ge=0)  # total de descontos aplicados
+    fee_amount_in_cents: int = Field(default=0, ge=0)       # total de taxas/extras aplicados
+    total_amount_in_cents: int = Field(ge=0)                # subtotal - discount + fee
     paid_amount_in_cents: int = Field(default=0, ge=0)
     status: PaymentStatus = Field(default=PaymentStatus.pending)
     method: Optional[PaymentMethod] = Field(default=None)

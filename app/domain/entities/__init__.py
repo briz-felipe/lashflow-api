@@ -11,9 +11,10 @@ from app.domain.entities.expense import Expense
 from app.domain.entities.time_slot import TimeSlot
 from app.domain.entities.blocked_date import BlockedDate
 from app.domain.entities.professional_settings import ProfessionalSettings
+from app.domain.entities.extra_service import ExtraService
 
 __all__ = [
     "User", "Client", "Procedure", "Appointment", "Payment",
     "PartialPaymentRecord", "Anamnesis", "Material", "StockMovement",
-    "Expense", "TimeSlot", "BlockedDate", "ProfessionalSettings",
+    "Expense", "TimeSlot", "BlockedDate", "ProfessionalSettings", "ExtraService",
 ]

@@ -133,6 +133,9 @@ def create_payment(
         professional_id=professional_id,
         appointment_id=body.appointment_id,
         client_id=body.client_id,
+        subtotal_amount_in_cents=body.subtotal_amount_in_cents,
+        discount_amount_in_cents=body.discount_amount_in_cents,
+        fee_amount_in_cents=body.fee_amount_in_cents,
         total_amount_in_cents=body.total_amount_in_cents,
         paid_amount_in_cents=body.paid_amount_in_cents,
         status=status,
@@ -169,12 +172,22 @@ def update_payment(
             [p.amount_in_cents for p in all_partials]
         )
 
+    if body.subtotal_amount_in_cents is not None:
+        payment.subtotal_amount_in_cents = body.subtotal_amount_in_cents
+    if body.discount_amount_in_cents is not None:
+        payment.discount_amount_in_cents = body.discount_amount_in_cents
+    if body.fee_amount_in_cents is not None:
+        payment.fee_amount_in_cents = body.fee_amount_in_cents
     if body.paid_amount_in_cents is not None:
         payment.paid_amount_in_cents = body.paid_amount_in_cents
     if body.method is not None:
         payment.method = body.method
     if body.notes is not None:
         payment.notes = body.notes
+    if body.status is not None:
+        payment.status = body.status
+    if body.paid_at is not None:
+        payment.paid_at = body.paid_at
 
     payment.status = calculate_payment_status(
         payment.paid_amount_in_cents, payment.total_amount_in_cents

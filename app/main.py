@@ -33,6 +33,7 @@ from app.interface.routers import settings_router
 from app.interface.routers import dashboard as dashboard_router
 from app.interface.routers import public as public_router
 from app.interface.routers import integrations_router
+from app.interface.routers import extra_services_router
 
 
 def _run_migrations() -> None:
@@ -152,6 +153,7 @@ app.include_router(settings_router.router, prefix=PREFIX)
 app.include_router(dashboard_router.router, prefix=PREFIX)
 app.include_router(public_router.router, prefix=PREFIX)
 app.include_router(integrations_router.router, prefix=PREFIX)
+app.include_router(extra_services_router.router, prefix=PREFIX)
 
 # --- MCP Server (deve ser montado após todos os routers) ---
 mcp = FastApiMCP(app)
