@@ -152,7 +152,8 @@ def create_appointment(
 
     repo = AppointmentRepository(session)
     existing = repo.get_active_on_date(professional_id, body.scheduled_at.date())
-    conflict = find_conflict(body.scheduled_at, procedure.duration_minutes, existing)
+    effective_duration = body.duration_minutes or procedure.duration_minutes
+    conflict = find_conflict(body.scheduled_at, effective_duration, existing)
     if conflict:
         conflict_client = session.get(Client, conflict.client_id)
         client_name = conflict_client.name if conflict_client else "outro cliente"
@@ -168,9 +169,10 @@ def create_appointment(
         service_type=body.service_type,
         status=initial_status,
         scheduled_at=body.scheduled_at,
-        duration_minutes=procedure.duration_minutes,
+        duration_minutes=effective_duration,
         price_charged=body.price_charged if body.price_charged is not None else procedure.price_in_cents,
         notes=body.notes,
+        procedure_name_override=body.procedure_name,
     )
     created = repo.create(appt)
 

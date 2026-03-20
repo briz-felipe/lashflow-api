@@ -10,7 +10,9 @@ class AppointmentCreate(CamelModel):
     procedure_id: uuid.UUID
     scheduled_at: datetime
     service_type: Optional[LashServiceType] = None
-    price_charged: Optional[int] = None  # defaults to procedure.price_in_cents if omitted
+    price_charged: Optional[int] = None       # defaults to procedure.price_in_cents if omitted
+    duration_minutes: Optional[int] = None    # override when combining multiple procedures
+    procedure_name: Optional[str] = None      # override for combined name (e.g. "Remoção + Aplicação")
     notes: Optional[str] = None
     status: Optional[AppointmentStatus] = None  # if omitted, defaults to pending_approval
 
