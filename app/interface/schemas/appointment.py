@@ -26,6 +26,16 @@ class AppointmentCancelRequest(CamelModel):
     cancelled_by: Optional[CancelledBy] = None
 
 
+class AppointmentUpdate(CamelModel):
+    procedure_id: Optional[uuid.UUID] = None
+    scheduled_at: Optional[datetime] = None
+    service_type: Optional[LashServiceType] = None
+    price_charged: Optional[int] = None
+    duration_minutes: Optional[int] = None
+    procedure_name: Optional[str] = None  # empty string = clear override
+    notes: Optional[str] = None
+
+
 class AppointmentResponse(CamelModel):
     id: uuid.UUID
     client_id: uuid.UUID

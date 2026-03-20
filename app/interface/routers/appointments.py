@@ -20,6 +20,7 @@ from app.domain.services import calendar_sync_service
 from app.interface.dependencies import get_professional_id
 from app.interface.schemas.appointment import (
     AppointmentCreate,
+    AppointmentUpdate,
     AppointmentStatusUpdate,
     AppointmentCancelRequest,
     AppointmentResponse,
@@ -184,6 +185,54 @@ def create_appointment(
         background_tasks.add_task(calendar_sync_service.sync_create, created, session)
 
     return _to_response(created, session)
+
+
+@router.patch("/{appointment_id}", response_model=AppointmentResponse)
+def update_appointment(
+    appointment_id: uuid.UUID,
+    body: AppointmentUpdate,
+    background_tasks: BackgroundTasks,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    repo = AppointmentRepository(session)
+    appt = repo.get_by_id(professional_id, appointment_id)
+    if not appt:
+        raise HTTPException(404, "Appointment not found")
+
+    if body.procedure_id is not None:
+        proc_repo = ProcedureRepository(session)
+        procedure = proc_repo.get_by_id(professional_id, body.procedure_id)
+        if not procedure:
+            raise HTTPException(404, "Procedure not found")
+        appt.procedure_id = body.procedure_id
+
+    if body.scheduled_at is not None:
+        effective_duration = body.duration_minutes or appt.duration_minutes
+        existing = repo.get_active_on_date(professional_id, body.scheduled_at.date())
+        conflict = find_conflict(body.scheduled_at, effective_duration, existing, exclude_id=appt.id)
+        if conflict:
+            conflict_client = session.get(Client, conflict.client_id)
+            client_name = conflict_client.name if conflict_client else "outro cliente"
+            raise SlotUnavailable(
+                f"Horário indisponível: {client_name} já tem agendamento nesse horário."
+            )
+        appt.scheduled_at = body.scheduled_at
+
+    if body.service_type is not None:
+        appt.service_type = body.service_type
+    if body.price_charged is not None:
+        appt.price_charged = body.price_charged
+    if body.duration_minutes is not None:
+        appt.duration_minutes = body.duration_minutes
+    if body.procedure_name is not None:
+        appt.procedure_name_override = body.procedure_name if body.procedure_name else None
+    if body.notes is not None:
+        appt.notes = body.notes if body.notes else None
+
+    appt.updated_at = datetime.now(timezone.utc)
+    updated = repo.update(appt)
+    return _to_response(updated, session)
 
 
 @router.patch("/{appointment_id}/status", response_model=AppointmentResponse)
