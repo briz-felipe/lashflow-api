@@ -32,6 +32,9 @@ class Appointment(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    # Override for combined multi-procedure names (e.g. "Remoção + Volume Russo")
+    procedure_name_override: Optional[str] = Field(default=None)
+
     # Apple Calendar sync
     apple_event_uid: Optional[str] = Field(default=None, max_length=100)
 
