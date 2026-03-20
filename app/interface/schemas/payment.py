@@ -20,6 +20,9 @@ class PartialPaymentRecordResponse(CamelModel):
 class PaymentCreate(CamelModel):
     appointment_id: uuid.UUID
     client_id: uuid.UUID
+    subtotal_amount_in_cents: int = 0
+    discount_amount_in_cents: int = 0
+    fee_amount_in_cents: int = 0
     total_amount_in_cents: int
     paid_amount_in_cents: int = 0
     method: Optional[PaymentMethod] = None
@@ -28,15 +31,23 @@ class PaymentCreate(CamelModel):
 
 class PaymentUpdate(CamelModel):
     partial_payment: Optional[PartialPaymentRequest] = None
+    subtotal_amount_in_cents: Optional[int] = None
+    discount_amount_in_cents: Optional[int] = None
+    fee_amount_in_cents: Optional[int] = None
     paid_amount_in_cents: Optional[int] = None
     method: Optional[PaymentMethod] = None
     notes: Optional[str] = None
+    status: Optional[PaymentStatus] = None
+    paid_at: Optional[datetime] = None
 
 
 class PaymentResponse(CamelModel):
     id: uuid.UUID
     appointment_id: uuid.UUID
     client_id: uuid.UUID
+    subtotal_amount_in_cents: int
+    discount_amount_in_cents: int
+    fee_amount_in_cents: int
     total_amount_in_cents: int
     paid_amount_in_cents: int
     status: PaymentStatus
