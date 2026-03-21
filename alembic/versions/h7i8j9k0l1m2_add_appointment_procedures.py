@@ -42,7 +42,7 @@ def upgrade() -> None:
     if is_sqlite:
         uuid_expr = "lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab', abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))"
     else:
-        uuid_expr = "gen_random_uuid()::text"
+        uuid_expr = "gen_random_uuid()"
 
     bind.execute(sa.text(f"""
         INSERT INTO appointment_procedures (id, appointment_id, procedure_id, original_price_in_cents, custom_price_in_cents, duration_minutes, created_at)
