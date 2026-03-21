@@ -7,9 +7,11 @@ from sqlmodel import Session
 from app.infrastructure.database import get_session
 from app.infrastructure.repositories.appointment_repository import AppointmentRepository
 from app.infrastructure.repositories.procedure_repository import ProcedureRepository
+from app.infrastructure.repositories.appointment_procedure_repository import AppointmentProcedureRepository
 from app.infrastructure.repositories.time_slot_repository import TimeSlotRepository
 from app.infrastructure.repositories.blocked_date_repository import BlockedDateRepository
 from app.domain.entities.appointment import Appointment
+from app.domain.entities.appointment_procedure import AppointmentProcedure
 from app.domain.entities.client import Client
 from app.domain.entities.procedure import Procedure
 from app.domain.enums import AppointmentStatus, CancelledBy
@@ -24,10 +26,32 @@ from app.interface.schemas.appointment import (
     AppointmentStatusUpdate,
     AppointmentCancelRequest,
     AppointmentResponse,
+    AppointmentProcedureInput,
+    AppointmentProcedureResponse,
     AvailableSlotsResponse,
 )
 
 router = APIRouter(prefix="/appointments", tags=["appointments"])
+
+
+def _build_procedure_responses(
+    appointment_id: uuid.UUID, session: Session
+) -> List[AppointmentProcedureResponse]:
+    ap_repo = AppointmentProcedureRepository(session)
+    rows = ap_repo.get_by_appointment(appointment_id)
+    result = []
+    for row in rows:
+        proc = session.get(Procedure, row.procedure_id)
+        result.append(AppointmentProcedureResponse(
+            id=row.id,
+            procedure_id=row.procedure_id,
+            procedure_name=proc.name if proc else "Procedimento removido",
+            custom_price_in_cents=row.custom_price_in_cents,
+            original_price_in_cents=row.original_price_in_cents,
+            effective_price_in_cents=row.effective_price,
+            duration_minutes=row.duration_minutes,
+        ))
+    return result
 
 
 def _to_response(appt: Appointment, session: Session) -> AppointmentResponse:
@@ -37,7 +61,14 @@ def _to_response(appt: Appointment, session: Session) -> AppointmentResponse:
     if client:
         data.client_name = client.name
         data.client_phone = client.phone
-    if appt.procedure_name_override:
+
+    # Populate procedures array from junction table
+    data.procedures = _build_procedure_responses(appt.id, session)
+
+    # Derive procedure_name from junction table if available
+    if data.procedures:
+        data.procedure_name = " + ".join(p.procedure_name for p in data.procedures)
+    elif appt.procedure_name_override:
         data.procedure_name = appt.procedure_name_override
     else:
         procedure = session.get(Procedure, appt.procedure_id)
@@ -46,14 +77,53 @@ def _to_response(appt: Appointment, session: Session) -> AppointmentResponse:
     return data
 
 
+def _create_junction_rows(
+    appointment_id: uuid.UUID,
+    procedures_input: List[AppointmentProcedureInput],
+    professional_id: uuid.UUID,
+    session: Session,
+) -> tuple[int, int, List[str]]:
+    """Validate and create junction rows. Returns (total_price, total_duration, names)."""
+    proc_repo = ProcedureRepository(session)
+    ap_repo = AppointmentProcedureRepository(session)
+
+    rows = []
+    total_price = 0
+    total_duration = 0
+    names = []
+
+    for p_input in procedures_input:
+        proc = proc_repo.get_by_id(professional_id, p_input.procedure_id)
+        if not proc:
+            raise HTTPException(404, f"Procedure {p_input.procedure_id} not found")
+        if not proc.is_active:
+            raise HTTPException(422, f"Procedure '{proc.name}' is inactive")
+
+        effective_price = p_input.custom_price_in_cents if p_input.custom_price_in_cents is not None else proc.price_in_cents
+        total_price += effective_price
+        total_duration += proc.duration_minutes
+        names.append(proc.name)
+
+        rows.append(AppointmentProcedure(
+            appointment_id=appointment_id,
+            procedure_id=p_input.procedure_id,
+            custom_price_in_cents=p_input.custom_price_in_cents,
+            original_price_in_cents=proc.price_in_cents,
+            duration_minutes=proc.duration_minutes,
+        ))
+
+    ap_repo.bulk_create(rows)
+    return total_price, total_duration, names
+
+
 @router.get("/available-slots", response_model=AvailableSlotsResponse)
 def available_slots(
     date: str = Query(..., description="YYYY-MM-DD"),
     procedure_id: uuid.UUID = Query(...),
+    duration_minutes: Optional[int] = Query(default=None, description="Override duration for multi-procedure"),
     professional_id: uuid.UUID = Depends(get_professional_id),
     session: Session = Depends(get_session),
 ):
-    from datetime import date as date_type
     try:
         target_date = datetime.strptime(date, "%Y-%m-%d").date()
     except ValueError:
@@ -64,15 +134,14 @@ def available_slots(
     if not procedure or not procedure.is_active:
         raise HTTPException(404, "Procedure not found or inactive")
 
+    effective_duration = duration_minutes or procedure.duration_minutes
+
     ts_repo = TimeSlotRepository(session)
     bd_repo = BlockedDateRepository(session)
     appt_repo = AppointmentRepository(session)
 
-    # Python weekday(): 0=Monday, 6=Sunday
-    # TimeSlot day_of_week: 0=Sunday (matches JS)
-    # Convert: JS Sunday=0 → Python weekday Sunday=6
-    day_of_week_python = target_date.weekday()  # 0=Mon
-    day_of_week_js = (day_of_week_python + 1) % 7  # 0=Sun
+    day_of_week_python = target_date.weekday()
+    day_of_week_js = (day_of_week_python + 1) % 7
 
     time_slot = ts_repo.get_for_day(professional_id, day_of_week_js)
     blocked_dates = [b.date for b in bd_repo.list(professional_id)]
@@ -80,7 +149,7 @@ def available_slots(
 
     slots = calculate_available_slots(
         target_date=target_date,
-        procedure_duration=procedure.duration_minutes,
+        procedure_duration=effective_duration,
         day_of_week=day_of_week_js,
         start_time=time_slot.start_time if time_slot else None,
         end_time=time_slot.end_time if time_slot else None,
@@ -149,14 +218,45 @@ def create_appointment(
     professional_id: uuid.UUID = Depends(get_professional_id),
     session: Session = Depends(get_session),
 ):
-    proc_repo = ProcedureRepository(session)
-    procedure = proc_repo.get_by_id(professional_id, body.procedure_id)
-    if not procedure:
-        raise HTTPException(404, "Procedure not found")
+    use_multi = body.procedures and len(body.procedures) > 0
+
+    if use_multi:
+        # Multi-procedure path: validate all procedures and compute totals
+        proc_repo = ProcedureRepository(session)
+        total_price = 0
+        total_duration = 0
+        names = []
+        for p_input in body.procedures:
+            proc = proc_repo.get_by_id(professional_id, p_input.procedure_id)
+            if not proc:
+                raise HTTPException(404, f"Procedure {p_input.procedure_id} not found")
+            if not proc.is_active:
+                raise HTTPException(422, f"Procedure '{proc.name}' is inactive")
+            ep = p_input.custom_price_in_cents if p_input.custom_price_in_cents is not None else proc.price_in_cents
+            total_price += ep
+            total_duration += proc.duration_minutes
+            names.append(proc.name)
+
+        primary_procedure_id = body.procedures[0].procedure_id
+        effective_duration = body.duration_minutes or total_duration
+        effective_price = body.price_charged if body.price_charged is not None else total_price
+        combined_name = " + ".join(names) if len(names) > 1 else None
+    else:
+        # Legacy single-procedure path
+        if not body.procedure_id:
+            raise HTTPException(422, "Either procedure_id or procedures must be provided")
+        proc_repo = ProcedureRepository(session)
+        procedure = proc_repo.get_by_id(professional_id, body.procedure_id)
+        if not procedure:
+            raise HTTPException(404, "Procedure not found")
+
+        primary_procedure_id = body.procedure_id
+        effective_duration = body.duration_minutes or procedure.duration_minutes
+        effective_price = body.price_charged if body.price_charged is not None else procedure.price_in_cents
+        combined_name = body.procedure_name if body.procedure_name else None
 
     repo = AppointmentRepository(session)
     existing = repo.get_active_on_date(professional_id, body.scheduled_at.date())
-    effective_duration = body.duration_minutes or procedure.duration_minutes
     conflict = find_conflict(body.scheduled_at, effective_duration, existing)
     if conflict:
         conflict_client = session.get(Client, conflict.client_id)
@@ -169,16 +269,31 @@ def create_appointment(
     appt = Appointment(
         professional_id=professional_id,
         client_id=body.client_id,
-        procedure_id=body.procedure_id,
+        procedure_id=primary_procedure_id,
         service_type=body.service_type,
         status=initial_status,
         scheduled_at=body.scheduled_at,
         duration_minutes=effective_duration,
-        price_charged=body.price_charged if body.price_charged is not None else procedure.price_in_cents,
+        price_charged=effective_price,
         notes=body.notes,
-        procedure_name_override=body.procedure_name if body.procedure_name else None,
+        procedure_name_override=combined_name,
     )
     created = repo.create(appt)
+
+    # Create junction rows
+    if use_multi:
+        _create_junction_rows(created.id, body.procedures, professional_id, session)
+    else:
+        # Legacy path: still create a single junction row for consistency
+        proc = proc_repo.get_by_id(professional_id, primary_procedure_id)
+        ap_repo = AppointmentProcedureRepository(session)
+        ap_repo.bulk_create([AppointmentProcedure(
+            appointment_id=created.id,
+            procedure_id=primary_procedure_id,
+            custom_price_in_cents=body.price_charged if body.price_charged is not None and proc and body.price_charged != proc.price_in_cents else None,
+            original_price_in_cents=proc.price_in_cents if proc else effective_price,
+            duration_minutes=proc.duration_minutes if proc else effective_duration,
+        )])
 
     # Sync confirmed appointments to Apple Calendar
     if initial_status == AppointmentStatus.confirmed:
@@ -200,15 +315,59 @@ def update_appointment(
     if not appt:
         raise HTTPException(404, "Appointment not found")
 
-    if body.procedure_id is not None:
+    # Handle multi-procedure update
+    if body.procedures is not None:
+        ap_repo = AppointmentProcedureRepository(session)
         proc_repo = ProcedureRepository(session)
-        procedure = proc_repo.get_by_id(professional_id, body.procedure_id)
-        if not procedure:
-            raise HTTPException(404, "Procedure not found")
-        appt.procedure_id = body.procedure_id
+
+        # Validate and build new junction rows
+        rows = []
+        total_price = 0
+        total_duration = 0
+        names = []
+        for p_input in body.procedures:
+            proc = proc_repo.get_by_id(professional_id, p_input.procedure_id)
+            if not proc:
+                raise HTTPException(404, f"Procedure {p_input.procedure_id} not found")
+            if not proc.is_active:
+                raise HTTPException(422, f"Procedure '{proc.name}' is inactive")
+            ep = p_input.custom_price_in_cents if p_input.custom_price_in_cents is not None else proc.price_in_cents
+            total_price += ep
+            total_duration += proc.duration_minutes
+            names.append(proc.name)
+            rows.append(AppointmentProcedure(
+                appointment_id=appointment_id,
+                procedure_id=p_input.procedure_id,
+                custom_price_in_cents=p_input.custom_price_in_cents,
+                original_price_in_cents=proc.price_in_cents,
+                duration_minutes=proc.duration_minutes,
+            ))
+
+        ap_repo.replace_for_appointment(appointment_id, rows)
+
+        # Update legacy fields from junction data
+        appt.procedure_id = body.procedures[0].procedure_id
+        appt.price_charged = body.price_charged if body.price_charged is not None else total_price
+        appt.duration_minutes = body.duration_minutes if body.duration_minutes is not None else total_duration
+        appt.procedure_name_override = " + ".join(names) if len(names) > 1 else None
+    else:
+        # Legacy single-procedure update
+        if body.procedure_id is not None:
+            proc_repo = ProcedureRepository(session)
+            procedure = proc_repo.get_by_id(professional_id, body.procedure_id)
+            if not procedure:
+                raise HTTPException(404, "Procedure not found")
+            appt.procedure_id = body.procedure_id
+
+        if body.price_charged is not None:
+            appt.price_charged = body.price_charged
+        if body.duration_minutes is not None:
+            appt.duration_minutes = body.duration_minutes
+        if body.procedure_name is not None:
+            appt.procedure_name_override = body.procedure_name if body.procedure_name else None
 
     if body.scheduled_at is not None:
-        effective_duration = body.duration_minutes or appt.duration_minutes
+        effective_duration = appt.duration_minutes
         existing = repo.get_active_on_date(professional_id, body.scheduled_at.date())
         conflict = find_conflict(body.scheduled_at, effective_duration, existing, exclude_id=appt.id)
         if conflict:
@@ -221,12 +380,6 @@ def update_appointment(
 
     if body.service_type is not None:
         appt.service_type = body.service_type
-    if body.price_charged is not None:
-        appt.price_charged = body.price_charged
-    if body.duration_minutes is not None:
-        appt.duration_minutes = body.duration_minutes
-    if body.procedure_name is not None:
-        appt.procedure_name_override = body.procedure_name if body.procedure_name else None
     if body.notes is not None:
         appt.notes = body.notes if body.notes else None
 
