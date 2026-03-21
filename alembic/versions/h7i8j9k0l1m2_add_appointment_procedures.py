@@ -38,13 +38,16 @@ def upgrade() -> None:
     op.create_index('ix_appointment_procedures_procedure_id', 'appointment_procedures', ['procedure_id'])
 
     # 2. Migrate existing data: create one row per existing appointment
-    bind.execute(sa.text("""
+    # Use dialect-specific UUID generation (PostgreSQL can't parse SQLite functions even in dead branches)
+    if is_sqlite:
+        uuid_expr = "lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab', abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))"
+    else:
+        uuid_expr = "gen_random_uuid()::text"
+
+    bind.execute(sa.text(f"""
         INSERT INTO appointment_procedures (id, appointment_id, procedure_id, original_price_in_cents, custom_price_in_cents, duration_minutes, created_at)
         SELECT
-            CASE
-                WHEN :is_sqlite THEN lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab', abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))
-                ELSE gen_random_uuid()::text
-            END,
+            {uuid_expr},
             a.id,
             a.procedure_id,
             COALESCE(p.price_in_cents, a.price_charged),
@@ -53,7 +56,7 @@ def upgrade() -> None:
             a.created_at
         FROM appointments a
         LEFT JOIN procedures p ON p.id = a.procedure_id
-    """).bindparams(is_sqlite=is_sqlite))
+    """))
 
 
 def downgrade() -> None:
