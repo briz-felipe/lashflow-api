@@ -42,6 +42,7 @@ def _user_to_me(user: User) -> MeResponse:
         salon_name=user.salon_name,
         salon_slug=user.salon_slug,
         salon_address=user.salon_address,
+        maintenance_cycle_days=user.maintenance_cycle_days,
         apple_calendar_connected=bool(user.apple_id and user.apple_password_encrypted),
         apple_calendar_name=user.apple_calendar_name,
     )
