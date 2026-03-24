@@ -5,16 +5,19 @@ Atualmente: Apple Calendar via CalDAV.
 import uuid
 import logging
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
 
 from app.infrastructure.database import get_session
 from app.infrastructure.repositories.user_repository import UserRepository
+from app.infrastructure.repositories.appointment_repository import AppointmentRepository
 from app.domain.entities.user import User
+from app.domain.enums import AppointmentStatus
 from app.domain.services.apple_calendar_service import AppleCalendarService, CalendarError
 from app.domain.services.crypto_service import encrypt_password, decrypt_password
-from app.interface.dependencies import get_current_user
+from app.domain.services import calendar_sync_service
+from app.interface.dependencies import get_current_user, get_professional_id
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 logger = logging.getLogger(__name__)
@@ -44,6 +47,11 @@ class AppleStatusResponse(BaseModel):
     connected: bool
     appleId: Optional[str] = None
     calendarName: Optional[str] = None
+
+
+class SyncAllResponse(BaseModel):
+    synced: int
+    failed: int
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -157,3 +165,79 @@ def apple_calendar_set(
         appleId=updated.apple_id,
         calendarName=updated.apple_calendar_name,
     )
+
+
+# ── Sync endpoints ────────────────────────────────────────────────────────────
+
+_SYNCABLE_STATUSES = [AppointmentStatus.confirmed, AppointmentStatus.in_progress]
+
+
+@router.post("/apple-calendar/sync-all", response_model=SyncAllResponse)
+def apple_calendar_sync_all(
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    """Bulk-sync all open appointments (confirmed/in_progress) that don't yet have an Apple event."""
+    user = session.get(User, professional_id)
+    if not user or not user.apple_id or not user.apple_calendar_name:
+        raise HTTPException(400, "Apple Calendar não configurado.")
+
+    repo = AppointmentRepository(session)
+    appointments = repo.list(professional_id, statuses=_SYNCABLE_STATUSES)
+    to_sync = [a for a in appointments if not a.apple_event_uid]
+
+    synced = 0
+    failed = 0
+    for appt in to_sync:
+        try:
+            calendar_sync_service.sync_create(appt, session)
+            synced += 1
+        except Exception:
+            failed += 1
+
+    return SyncAllResponse(synced=synced, failed=failed)
+
+
+@router.post("/apple-calendar/sync/{appointment_id}")
+def apple_calendar_sync_appointment(
+    appointment_id: uuid.UUID,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    """Sync a single appointment to Apple Calendar."""
+    repo = AppointmentRepository(session)
+    appt = repo.get_by_id(professional_id, appointment_id)
+    if not appt:
+        raise HTTPException(404, "Appointment not found")
+
+    user = session.get(User, professional_id)
+    if not user or not user.apple_id or not user.apple_calendar_name:
+        raise HTTPException(400, "Apple Calendar não configurado.")
+
+    if appt.apple_event_uid:
+        calendar_sync_service.sync_update(appt, session)
+    else:
+        calendar_sync_service.sync_create(appt, session)
+
+    return {"synced": True, "appleEventUid": appt.apple_event_uid}
+
+
+@router.delete("/apple-calendar/sync/{appointment_id}", status_code=200)
+def apple_calendar_unsync_appointment(
+    appointment_id: uuid.UUID,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    """Remove a single appointment from Apple Calendar."""
+    repo = AppointmentRepository(session)
+    appt = repo.get_by_id(professional_id, appointment_id)
+    if not appt:
+        raise HTTPException(404, "Appointment not found")
+
+    if appt.apple_event_uid:
+        calendar_sync_service.sync_delete(appt, session)
+        appt.apple_event_uid = None
+        session.add(appt)
+        session.commit()
+
+    return {"removed": True}

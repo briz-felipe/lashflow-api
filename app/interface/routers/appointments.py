@@ -385,6 +385,11 @@ def update_appointment(
 
     appt.updated_at = datetime.now(timezone.utc)
     updated = repo.update(appt)
+
+    # Sync to Apple Calendar if appointment is confirmed and has an event
+    if updated.status in (AppointmentStatus.confirmed, AppointmentStatus.in_progress):
+        background_tasks.add_task(calendar_sync_service.sync_update, updated, session)
+
     return _to_response(updated, session)
 
 
