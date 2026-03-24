@@ -76,6 +76,7 @@ class AppointmentResponse(CamelModel):
     created_at: datetime
     updated_at: datetime
     procedures: List[AppointmentProcedureResponse] = []
+    apple_event_uid: Optional[str] = None
 
 
 class AvailableSlotsResponse(CamelModel):
