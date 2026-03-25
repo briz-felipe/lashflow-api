@@ -10,6 +10,7 @@ class StockMovementCreate(CamelModel):
     type: StockMovementType
     quantity: int
     unit_cost_in_cents: int
+    expense_id: Optional[uuid.UUID] = None
     notes: Optional[str] = None
 
 
@@ -21,6 +22,7 @@ class StockMovementResponse(CamelModel):
     quantity: int
     unit_cost_in_cents: int
     total_cost_in_cents: int
+    expense_id: Optional[uuid.UUID] = None
     date: datetime
     notes: Optional[str]
     created_at: datetime

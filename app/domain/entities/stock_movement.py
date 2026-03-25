@@ -17,6 +17,7 @@ class StockMovement(SQLModel, table=True):
     unit_cost_in_cents: int = Field(ge=0)
     total_cost_in_cents: int = Field(ge=0)  # calculated: quantity * unit_cost_in_cents
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    expense_id: Optional[uuid.UUID] = Field(default=None, index=True)
     notes: Optional[str] = Field(default=None)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
