@@ -15,7 +15,7 @@ class AddressSchema(CamelModel):
 
 class ClientCreate(CamelModel):
     name: str
-    phone: str
+    phone: Optional[str] = None
     email: Optional[str] = None
     instagram: Optional[str] = None
     birthday: Optional[str] = None
@@ -37,7 +37,7 @@ class ClientUpdate(CamelModel):
 class ClientResponse(CamelModel):
     id: uuid.UUID
     name: str
-    phone: str
+    phone: Optional[str] = None
     email: Optional[str]
     instagram: Optional[str]
     birthday: Optional[str]
