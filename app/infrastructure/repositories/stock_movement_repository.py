@@ -32,6 +32,7 @@ class StockMovementRepository(BaseRepository[StockMovement]):
         self,
         professional_id: uuid.UUID,
         material_id: Optional[uuid.UUID] = None,
+        expense_id: Optional[uuid.UUID] = None,
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
     ) -> List[tuple]:
@@ -43,6 +44,8 @@ class StockMovementRepository(BaseRepository[StockMovement]):
         )
         if material_id:
             stmt = stmt.where(StockMovement.material_id == material_id)
+        if expense_id:
+            stmt = stmt.where(StockMovement.expense_id == expense_id)
         if from_date:
             stmt = stmt.where(StockMovement.date >= from_date)
         if to_date:

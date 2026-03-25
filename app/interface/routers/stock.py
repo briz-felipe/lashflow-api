@@ -121,6 +121,7 @@ def delete_material(
 @router.get("/movements", response_model=List[StockMovementResponse])
 def list_movements(
     material_id: Optional[uuid.UUID] = None,
+    expense_id: Optional[uuid.UUID] = None,
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
     professional_id: uuid.UUID = Depends(get_professional_id),
@@ -128,7 +129,8 @@ def list_movements(
 ):
     repo = StockMovementRepository(session)
     rows = repo.list_with_material_name(
-        professional_id, material_id=material_id, from_date=from_date, to_date=to_date
+        professional_id, material_id=material_id, expense_id=expense_id,
+        from_date=from_date, to_date=to_date,
     )
     result = []
     for movement, material_name in rows:
@@ -152,6 +154,16 @@ def create_movement(
     # Domain service validates and computes new stock (raises InsufficientStock if needed)
     new_stock = apply_movement(material.current_stock, body.type, body.quantity)
 
+    # Validate expense link if provided
+    if body.expense_id:
+        from app.infrastructure.repositories.expense_repository import ExpenseRepository
+        expense_repo = ExpenseRepository(session)
+        expense = expense_repo.get_by_id(professional_id, body.expense_id)
+        if not expense:
+            raise HTTPException(404, "Expense not found")
+        if expense.category != "material":
+            raise HTTPException(422, "Expense must have category 'material'")
+
     movement = StockMovement(
         professional_id=professional_id,
         material_id=body.material_id,
@@ -159,6 +171,7 @@ def create_movement(
         quantity=body.quantity,
         unit_cost_in_cents=body.unit_cost_in_cents,
         total_cost_in_cents=body.quantity * body.unit_cost_in_cents,
+        expense_id=body.expense_id,
         notes=body.notes,
     )
     movement_repo = StockMovementRepository(session)

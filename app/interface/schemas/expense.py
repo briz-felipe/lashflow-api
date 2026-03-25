@@ -56,3 +56,16 @@ class ExpenseSummaryResponse(CamelModel):
     paid_in_cents: int
     pending_in_cents: int
     by_category: dict[str, int]
+
+
+class LinkedMaterialItem(CamelModel):
+    material_name: str
+    quantity: int
+    unit_cost_in_cents: int
+    total_cost_in_cents: int
+    date: datetime
+
+
+class MaterialPurchaseResponse(CamelModel):
+    expense: ExpenseResponse
+    linked_materials: list[LinkedMaterialItem]

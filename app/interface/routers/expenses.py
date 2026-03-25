@@ -14,6 +14,8 @@ from app.interface.schemas.expense import (
     ExpenseResponse,
     ExpenseInstallmentResponse,
     ExpenseSummaryResponse,
+    MaterialPurchaseResponse,
+    LinkedMaterialItem,
 )
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -37,6 +39,41 @@ def monthly_totals(
 ):
     repo = ExpenseRepository(session)
     return repo.get_monthly_totals(professional_id, months)
+
+
+@router.get("/material-purchases", response_model=List[MaterialPurchaseResponse])
+def material_purchases(
+    month: Optional[str] = None,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    """List material expenses with linked stock movements."""
+    from app.infrastructure.repositories.stock_movement_repository import StockMovementRepository
+
+    repo = ExpenseRepository(session)
+    expenses = repo.list(professional_id, month=month, category="material")
+
+    movement_repo = StockMovementRepository(session)
+    result = []
+    for expense in expenses:
+        rows = movement_repo.list_with_material_name(
+            professional_id, expense_id=expense.id,
+        )
+        linked = [
+            LinkedMaterialItem(
+                material_name=material_name or "—",
+                quantity=mov.quantity,
+                unit_cost_in_cents=mov.unit_cost_in_cents,
+                total_cost_in_cents=mov.total_cost_in_cents,
+                date=mov.date,
+            )
+            for mov, material_name in rows
+        ]
+        result.append(MaterialPurchaseResponse(
+            expense=ExpenseResponse.model_validate(expense),
+            linked_materials=linked,
+        ))
+    return result
 
 
 @router.get("/", response_model=List[ExpenseResponse])
