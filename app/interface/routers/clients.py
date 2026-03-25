@@ -151,14 +151,14 @@ def create_client(
 ):
     repo = ClientRepository(session)
     rules = ProfessionalSettingsRepository(session).get_segment_rules(professional_id)
-    phone = normalize_phone(body.phone)
-    if repo.get_by_phone(professional_id, phone):
+    phone = normalize_phone(body.phone) if body.phone else None
+    if phone and repo.get_by_phone(professional_id, phone):
         raise HTTPException(409, detail="Phone already registered")
 
     client = Client(
         professional_id=professional_id,
         name=body.name,
-        phone=phone,
+        phone=phone or "",
         email=body.email,
         instagram=body.instagram,
         birthday=body.birthday,
