@@ -14,7 +14,7 @@ from app.interface.dependencies import get_professional_id
 from app.interface.schemas.material import (
     MaterialCreate, MaterialUpdate, MaterialResponse, StockValueResponse
 )
-from app.interface.schemas.stock_movement import StockMovementCreate, StockMovementResponse
+from app.interface.schemas.stock_movement import StockMovementCreate, StockMovementUpdate, StockMovementResponse
 
 router = APIRouter(prefix="/stock", tags=["stock"])
 
@@ -179,3 +179,74 @@ def create_movement(
     item = StockMovementResponse.model_validate(created)
     item.material_name = material.name
     return item
+
+
+def _stock_delta(movement: StockMovement) -> int:
+    """Returns the stock change caused by a movement (positive = added stock)."""
+    from app.domain.enums import StockMovementType as SMT
+    if movement.type == SMT.purchase:
+        return movement.quantity
+    elif movement.type == SMT.usage:
+        return -movement.quantity
+    return 0  # adjustment doesn't have a simple delta
+
+
+@router.put("/movements/{movement_id}", response_model=StockMovementResponse)
+def update_movement(
+    movement_id: uuid.UUID,
+    body: StockMovementUpdate,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    movement_repo = StockMovementRepository(session)
+    movement = movement_repo.get_by_id(professional_id, movement_id)
+    if not movement:
+        raise HTTPException(404, "Movement not found")
+
+    material_repo = MaterialRepository(session)
+    material = material_repo.get_by_id(professional_id, movement.material_id)
+    if not material:
+        raise HTTPException(404, "Material not found")
+
+    old_delta = _stock_delta(movement)
+
+    # Apply updates
+    if body.quantity is not None:
+        movement.quantity = body.quantity
+        movement.total_cost_in_cents = body.quantity * (
+            body.unit_cost_in_cents if body.unit_cost_in_cents is not None else movement.unit_cost_in_cents
+        )
+    if body.unit_cost_in_cents is not None:
+        movement.unit_cost_in_cents = body.unit_cost_in_cents
+        movement.total_cost_in_cents = movement.quantity * body.unit_cost_in_cents
+    if body.expense_id is not None:
+        movement.expense_id = body.expense_id if str(body.expense_id) != "00000000-0000-0000-0000-000000000000" else None
+    if body.notes is not None:
+        movement.notes = body.notes or None
+
+    new_delta = _stock_delta(movement)
+
+    updated = movement_repo.update_with_stock_adjustment(movement, material, old_delta, new_delta)
+    item = StockMovementResponse.model_validate(updated)
+    item.material_name = material.name
+    return item
+
+
+@router.delete("/movements/{movement_id}", status_code=204)
+def delete_movement(
+    movement_id: uuid.UUID,
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    movement_repo = StockMovementRepository(session)
+    movement = movement_repo.get_by_id(professional_id, movement_id)
+    if not movement:
+        raise HTTPException(404, "Movement not found")
+
+    material_repo = MaterialRepository(session)
+    material = material_repo.get_by_id(professional_id, movement.material_id)
+    if not material:
+        raise HTTPException(404, "Material not found")
+
+    delta = _stock_delta(movement)
+    movement_repo.delete_with_stock_rollback(movement, material, delta)

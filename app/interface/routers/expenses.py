@@ -54,11 +54,52 @@ def material_purchases(
     expenses = repo.list(professional_id, month=month, category="material")
 
     movement_repo = StockMovementRepository(session)
+
+    # Pre-compute: for installment groups, collect all expense IDs in the group
+    # so movements linked to ANY parcela show up on ALL parcelas
+    group_expense_ids: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for exp in expenses:
+        if exp.installment_group_id:
+            group_expense_ids.setdefault(exp.installment_group_id, []).append(exp.id)
+
+    # Also collect IDs from other months in the same group (not in current filter)
+    seen_groups = set(group_expense_ids.keys())
+    if seen_groups:
+        all_material = repo.list(professional_id, category="material")
+        for exp in all_material:
+            if exp.installment_group_id in seen_groups and exp.id not in [
+                eid for ids in group_expense_ids.values() for eid in ids
+            ]:
+                group_expense_ids[exp.installment_group_id].append(exp.id)
+
+    # Cache movements per group to avoid repeated queries
+    group_movements_cache: dict[uuid.UUID, list] = {}
+
     result = []
     for expense in expenses:
-        rows = movement_repo.list_with_material_name(
-            professional_id, expense_id=expense.id,
-        )
+        if expense.installment_group_id and expense.installment_group_id in group_expense_ids:
+            # Fetch movements for the whole installment group (cached)
+            gid = expense.installment_group_id
+            if gid not in group_movements_cache:
+                all_rows = []
+                for eid in group_expense_ids[gid]:
+                    all_rows.extend(movement_repo.list_with_material_name(
+                        professional_id, expense_id=eid,
+                    ))
+                # Deduplicate by movement id
+                seen_ids = set()
+                deduped = []
+                for row in all_rows:
+                    if row[0].id not in seen_ids:
+                        seen_ids.add(row[0].id)
+                        deduped.append(row)
+                group_movements_cache[gid] = deduped
+            rows = group_movements_cache[gid]
+        else:
+            rows = movement_repo.list_with_material_name(
+                professional_id, expense_id=expense.id,
+            )
+
         linked = [
             LinkedMaterialItem(
                 material_name=material_name or "—",
