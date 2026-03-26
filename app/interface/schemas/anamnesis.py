@@ -15,6 +15,7 @@ class LashMappingSchema(CamelModel):
 
 class AnamnesisCreate(CamelModel):
     client_id: uuid.UUID
+    appointment_id: Optional[uuid.UUID] = None
     has_allergy: bool = False
     allergy_details: Optional[str] = None
     had_eye_surgery_last_3_months: bool = False
@@ -61,6 +62,7 @@ class AnamnesisUpdate(CamelModel):
 class AnamnesisResponse(CamelModel):
     id: uuid.UUID
     client_id: uuid.UUID
+    appointment_id: Optional[uuid.UUID] = None
     has_allergy: bool
     allergy_details: Optional[str]
     had_eye_surgery_last_3_months: bool

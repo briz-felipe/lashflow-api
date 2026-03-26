@@ -26,6 +26,9 @@ class Anamnesis(SQLModel, table=True):
     prone_to_blepharitis: bool = Field(default=False)
     has_epilepsy: bool = Field(default=False)
 
+    # Link to appointment (optional)
+    appointment_id: Optional[uuid.UUID] = Field(default=None, index=True)
+
     # Service
     procedure_type: AnamnosisProcedureType
     mapping: Optional[dict] = Field(default=None, sa_column=Column(JSON))  # LashMapping
