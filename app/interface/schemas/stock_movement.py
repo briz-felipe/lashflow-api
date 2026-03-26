@@ -14,6 +14,13 @@ class StockMovementCreate(CamelModel):
     notes: Optional[str] = None
 
 
+class StockMovementUpdate(CamelModel):
+    quantity: Optional[int] = None
+    unit_cost_in_cents: Optional[int] = None
+    expense_id: Optional[uuid.UUID] = None
+    notes: Optional[str] = None
+
+
 class StockMovementResponse(CamelModel):
     id: uuid.UUID
     material_id: uuid.UUID

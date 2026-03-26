@@ -54,6 +54,10 @@ class StockMovementRepository(BaseRepository[StockMovement]):
         rows = self.session.execute(stmt).all()
         return [(row[0], row[1]) for row in rows]
 
+    def get_by_id(self, professional_id: uuid.UUID, movement_id: uuid.UUID) -> Optional[StockMovement]:
+        stmt = self._base_query(professional_id).where(StockMovement.id == movement_id)
+        return self.session.exec(stmt).first()
+
     def create_with_stock_update(
         self,
         movement: StockMovement,
@@ -61,7 +65,6 @@ class StockMovementRepository(BaseRepository[StockMovement]):
         new_stock: int,
     ) -> StockMovement:
         """Creates the movement and updates material stock in a single transaction."""
-        from datetime import datetime as dt_cls
         material.current_stock = new_stock
         material.updated_at = datetime.now(timezone.utc)
         self.session.add(material)
@@ -69,3 +72,36 @@ class StockMovementRepository(BaseRepository[StockMovement]):
         self.session.commit()
         self.session.refresh(movement)
         return movement
+
+    def update_with_stock_adjustment(
+        self,
+        movement: StockMovement,
+        material: Material,
+        old_stock_delta: int,
+        new_stock_delta: int,
+    ) -> StockMovement:
+        """Updates movement and adjusts material stock (reverses old, applies new)."""
+        material.current_stock = material.current_stock - old_stock_delta + new_stock_delta
+        if material.current_stock < 0:
+            material.current_stock = 0
+        material.updated_at = datetime.now(timezone.utc)
+        self.session.add(material)
+        self.session.add(movement)
+        self.session.commit()
+        self.session.refresh(movement)
+        return movement
+
+    def delete_with_stock_rollback(
+        self,
+        movement: StockMovement,
+        material: Material,
+        stock_delta: int,
+    ) -> None:
+        """Deletes movement and rolls back material stock."""
+        material.current_stock = material.current_stock - stock_delta
+        if material.current_stock < 0:
+            material.current_stock = 0
+        material.updated_at = datetime.now(timezone.utc)
+        self.session.add(material)
+        self.session.delete(movement)
+        self.session.commit()
