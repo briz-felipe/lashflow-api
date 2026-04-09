@@ -30,7 +30,7 @@ class MaterialRepository(BaseRepository[Material]):
         if search:
             stmt = stmt.where(Material.name.ilike(f"%{search}%"))
         if low_stock:
-            stmt = stmt.where(Material.current_stock <= Material.minimum_stock)
+            stmt = stmt.where(Material.minimum_stock > 0, Material.current_stock <= Material.minimum_stock)
         return list(self.session.exec(stmt).all())
 
     def get_by_id(
