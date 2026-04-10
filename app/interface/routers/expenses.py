@@ -117,6 +117,16 @@ def material_purchases(
     return result
 
 
+@router.get("/projected")
+def projected_expenses(
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    """Returns unpaid expenses grouped by reference_month (current month and future)."""
+    repo = ExpenseRepository(session)
+    return repo.get_projected_expenses(professional_id)
+
+
 @router.get("/", response_model=List[ExpenseResponse])
 def list_expenses(
     month: Optional[str] = None,
