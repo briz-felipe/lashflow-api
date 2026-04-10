@@ -170,6 +170,42 @@ class PaymentRepository(BaseRepository[Payment]):
             results.append({"month": f"{year:04d}-{month:02d}", "amount_in_cents": total})
         return results
 
+    def get_projected_revenue(self, professional_id: uuid.UUID) -> List[dict]:
+        """Returns projected revenue (pending/partial) grouped by appointment month."""
+        from app.domain.entities.appointment import Appointment
+        from app.domain.enums import AppointmentStatus, PaymentStatus
+
+        now = datetime.now(timezone.utc)
+        month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+
+        stmt = (
+            select(Appointment, Payment)
+            .outerjoin(Payment, Appointment.id == Payment.appointment_id)
+            .where(
+                Appointment.professional_id == professional_id,
+                Appointment.status.not_in([AppointmentStatus.cancelled, AppointmentStatus.no_show]),
+                Appointment.scheduled_at >= month_start,
+            )
+        )
+        rows = self.session.exec(stmt).all()
+
+        monthly: dict[str, int] = {}
+        for appointment, payment in rows:
+            d = appointment.scheduled_at
+            month_key = f"{d.year:04d}-{d.month:02d}"
+            if payment is None:
+                amount = appointment.price_charged
+            elif payment.status == PaymentStatus.paid:
+                amount = 0
+            elif payment.status == PaymentStatus.partial:
+                amount = payment.total_amount_in_cents - payment.paid_amount_in_cents
+            else:
+                amount = payment.total_amount_in_cents if payment.total_amount_in_cents > 0 else appointment.price_charged
+            if amount > 0:
+                monthly[month_key] = monthly.get(month_key, 0) + amount
+
+        return [{"month": k, "projected_in_cents": v} for k, v in sorted(monthly.items())]
+
     def get_method_breakdown(
         self,
         professional_id: uuid.UUID,

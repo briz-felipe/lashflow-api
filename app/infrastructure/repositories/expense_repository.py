@@ -72,6 +72,25 @@ class ExpenseRepository(BaseRepository[Expense]):
             "by_category": by_category,
         }
 
+    def get_projected_expenses(self, professional_id: uuid.UUID) -> List[dict]:
+        """Returns unpaid expenses grouped by reference_month (current month and future)."""
+        from datetime import datetime, timezone as tz
+
+        now = datetime.now(tz.utc)
+        current_month = f"{now.year:04d}-{now.month:02d}"
+
+        stmt = self._base_query(professional_id).where(
+            Expense.is_paid == False,  # noqa: E712
+            Expense.reference_month >= current_month,
+        )
+        expenses = list(self.session.exec(stmt).all())
+
+        monthly: dict[str, int] = {}
+        for e in expenses:
+            monthly[e.reference_month] = monthly.get(e.reference_month, 0) + e.amount_in_cents
+
+        return [{"month": k, "projected_in_cents": v} for k, v in sorted(monthly.items())]
+
     def get_monthly_totals(self, professional_id: uuid.UUID, months: int = 6) -> List[dict]:
         from datetime import datetime as dt_cls, timezone
         now = dt_cls.now(timezone.utc)
