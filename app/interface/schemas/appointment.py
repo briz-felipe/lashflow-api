@@ -31,6 +31,7 @@ class AppointmentCreate(CamelModel):
     notes: Optional[str] = None
     status: Optional[AppointmentStatus] = None  # if omitted, defaults to pending_approval
     procedures: Optional[List[AppointmentProcedureInput]] = None  # new multi-procedure
+    application_sheet: Optional[dict] = None
 
 
 class AppointmentStatusUpdate(CamelModel):
@@ -51,6 +52,7 @@ class AppointmentUpdate(CamelModel):
     procedure_name: Optional[str] = None  # empty string = clear override
     notes: Optional[str] = None
     procedures: Optional[List[AppointmentProcedureInput]] = None  # new multi-procedure
+    application_sheet: Optional[dict] = None  # null = remove
 
 
 class AppointmentResponse(CamelModel):
@@ -77,6 +79,7 @@ class AppointmentResponse(CamelModel):
     updated_at: datetime
     procedures: List[AppointmentProcedureResponse] = []
     apple_event_uid: Optional[str] = None
+    application_sheet: Optional[dict] = None
 
 
 class AvailableSlotsResponse(CamelModel):

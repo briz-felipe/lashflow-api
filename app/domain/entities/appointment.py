@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Column
+from sqlalchemy import JSON
 from app.domain.enums import AppointmentStatus, LashServiceType, CancelledBy
 
 
@@ -34,6 +35,9 @@ class Appointment(SQLModel, table=True):
 
     # Override for combined multi-procedure names (e.g. "Remoção + Volume Russo")
     procedure_name_override: Optional[str] = Field(default=None)
+
+    # Ficha rápida de aplicação (mapping, fio, observação técnica)
+    application_sheet: Optional[dict] = Field(default=None, sa_column=Column(JSON))
 
     # Apple Calendar sync
     apple_event_uid: Optional[str] = Field(default=None, max_length=100)
