@@ -197,7 +197,11 @@ def create_expense(
     )
 
 
-@router.put("/{expense_id}", response_model=ExpenseResponse)
+@router.api_route(
+    "/{expense_id}",
+    methods=["PUT", "PATCH"],
+    response_model=ExpenseResponse,
+)
 def update_expense(
     expense_id: uuid.UUID,
     body: ExpenseUpdate,
