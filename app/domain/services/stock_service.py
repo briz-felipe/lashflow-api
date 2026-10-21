@@ -32,4 +32,4 @@ def apply_movement(
 
 
 def is_low_stock(current_stock: int, minimum_stock: int) -> bool:
-    return current_stock <= minimum_stock
+    return minimum_stock > 0 and current_stock <= minimum_stock

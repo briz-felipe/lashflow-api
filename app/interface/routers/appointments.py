@@ -277,6 +277,7 @@ def create_appointment(
         price_charged=effective_price,
         notes=body.notes,
         procedure_name_override=combined_name,
+        application_sheet=body.application_sheet,
     )
     created = repo.create(appt)
 
@@ -382,6 +383,11 @@ def update_appointment(
         appt.service_type = body.service_type
     if body.notes is not None:
         appt.notes = body.notes if body.notes else None
+    if body.application_sheet is not None:
+        appt.application_sheet = body.application_sheet
+    elif body.model_fields_set and "application_sheet" in body.model_fields_set:
+        # Explicitly sent as null → remove the sheet
+        appt.application_sheet = None
 
     appt.updated_at = datetime.now(timezone.utc)
     updated = repo.update(appt)

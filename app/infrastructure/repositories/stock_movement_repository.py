@@ -65,7 +65,10 @@ class StockMovementRepository(BaseRepository[StockMovement]):
         new_stock: int,
     ) -> StockMovement:
         """Creates the movement and updates material stock in a single transaction."""
+        from app.domain.enums import StockMovementType
         material.current_stock = new_stock
+        if movement.type == StockMovementType.purchase and movement.unit_cost_in_cents > 0:
+            material.unit_cost_in_cents = movement.unit_cost_in_cents
         material.updated_at = datetime.now(timezone.utc)
         self.session.add(material)
         self.session.add(movement)

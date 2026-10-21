@@ -62,6 +62,16 @@ def method_breakdown(
     return MethodBreakdownResponse(**breakdown)
 
 
+@router.get("/projected")
+def projected_revenue(
+    professional_id: uuid.UUID = Depends(get_professional_id),
+    session: Session = Depends(get_session),
+):
+    """Returns projected revenue (pending/partial payments) grouped by month."""
+    repo = PaymentRepository(session)
+    return repo.get_projected_revenue(professional_id)
+
+
 @router.get("/by-appointment/{appointment_id}", response_model=Optional[PaymentResponse])
 def get_by_appointment(
     appointment_id: uuid.UUID,
