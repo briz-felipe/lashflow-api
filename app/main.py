@@ -20,6 +20,7 @@ from app.domain.exceptions import (
     DuplicatePhone,
     AllergyDetailRequired,
 )
+
 from app.interface.dependencies import hash_password
 from app.interface.routers import auth as auth_router
 from app.interface.routers import clients as clients_router
